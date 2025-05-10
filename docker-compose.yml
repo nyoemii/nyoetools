@@ -1,0 +1,10 @@
+version: '3.4'
+
+services:
+  nyoetools:
+    image: nyoetools
+    volumes:
+    #  - /home/user:/home/user # add your own volumes to this
+    build:
+      context: .
+      dockerfile: ./Dockerfile
