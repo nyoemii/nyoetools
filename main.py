@@ -14,6 +14,8 @@ import logging
 import asyncio
 import pytz
 import qrcode
+import sh
+import subprocess
 
 from datetime import datetime, timedelta
 from pytz import timezone
@@ -26,9 +28,9 @@ from collections import defaultdict
 load_dotenv()
 
 newsapikey = os.environ["NEWS_API_KEY"]
-bot_token = os.environ["BOT_TOKEN_APP"]
+bot_token = os.environ["BOT_TOKEN"]
 
-TIMEZONE = pytz.timezone('Europe/Berlin')
+TIMEZONE = pytz.timezone('Europe/Berlin') # or your own timezone (still broken)
 
 intents = nextcord.Intents.default()
 intents.message_content = True
@@ -135,20 +137,30 @@ async def ping(interaction: Interaction):
 async def eval(interaction: nextcord.Interaction, *, code: str) -> None:
     """A dangerous command to run Python Code and return the result"""
     logging.basicConfig(filename="eval_logs.txt", level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
+    TRUSTED_USERS = {} # add your own user id(s)
 
-    if interaction.user.id not in {}: # ADD USER IDS HERE
+    if interaction.user.id not in TRUSTED_USERS:
         logging.warning(f"WARNING - User {interaction.user.name} ({interaction.user.id}) tried to execute {code}")
+        print(f"WARNING - User {interaction.user.name} ({interaction.user.id}) tried to execute {code}")
         await interaction.send(f"User {interaction.user.name} was hoping to evaluate code :c")
         return
 
-    if any(keyword in code.lower() for keyword in ["for x in", "os.environ", "os.system", "eval(", "exec(", "shutil", "import os;"]):
+        if any(keyword in code.lower() for keyword in ["for x in", "os.environ", "os.system", "eval(", "exec(", "shutil", "import os;", "builtins", "getattr", ".system", "__import__", "sys", "version_info", "shutdown", "rm -rf"]):
+            logging.warning(f"CODE LOG - User {interaction.user.name} tried to execute:\n{code}")
+            print(f"CODE LOG - User {interaction.user.name} tried to execute:\n{code}")
+            await interaction.send("Dangerous Code found!")
+            return
+    
+    if any(keyword in code.lower() for keyword in ["shutdown", "restart"]):
+        logging.warning(f"CODE LOG - User {interaction.user.name} tried to execute:\n{code}")
+        print(f"CODE LOG - User {interaction.user.name} tried to execute:\n{code}")
         await interaction.send("Dangerous Code found!")
         return
-    
+
     memory_limit(1024)
 
     start_time = datetime.now(TIMEZONE)
-    
+
     exec_namespace = {**globals(), **locals(), **{mod.__name__: mod for mod in sys.modules.values()}}
 
     # Indent the code for the async function
@@ -171,7 +183,7 @@ async def _execute():
         logging.info(f"SUCCESS - User {interaction.user.name} ({interaction.user.id}) executed {code} - Executed in {exec_time:.3f}s")
         # Send the result to the channel
         sys.stdout = sys.__stdout__
-        captured_output = output.getvalue()
+        captured_output = output.getvalue().strip()
         await interaction.response.defer()
         await interaction.send(captured_output)
     except Exception:
@@ -316,13 +328,32 @@ async def poll(interaction: nextcord.Interaction, question: str, option1: str, o
 
     await interaction.response.send_message(embed=embed, view=view)
 
+@bot.slash_command(
+    description="Fastfetch :3",
+    integration_types=[
+        IntegrationType.user_install,
+        IntegrationType.guild_install,
+    ],
+    contexts=[
+        InteractionContextType.guild,
+        InteractionContextType.bot_dm,
+        InteractionContextType.private_channel,
+    ],
+)
+async def fastfetch(interaction: nextcord.Interaction):
+    os.system("/home/linuxbrew/.linuxbrew/bin/termshot --filename /home/nyoemi/nfss/output.png -- 'fastfetch --config /home/nyoemi/.config/fastfetch/config.jsonc'")
+
+    file = "/home/nyoemi/nfss/output.png"
+
+    await interaction.response.defer()
+    await interaction.send(file=nextcord.File(file))
+
 @bot.event
 async def on_ready():
     await bot.sync_application_commands()
     print("We ball")
 
 bot.run(bot_token)
-# ignore this below
 """
 KEEP THIS HERE AT ALL COSTS
 @bot.slash_command(
