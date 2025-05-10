@@ -1,0 +1,11 @@
+nextcord
+requests
+aiohttp
+datetime
+psutil
+logging
+asyncio
+pytz
+qrcode
+sh
+dotenv
