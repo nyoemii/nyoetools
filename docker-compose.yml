@@ -8,3 +8,8 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./main.py
+          target: /app/main.py
