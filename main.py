@@ -138,6 +138,7 @@ async def eval(interaction: nextcord.Interaction, *, code: str) -> None:
     """A dangerous command to run Python Code and return the result"""
     logging.basicConfig(filename="eval_logs.txt", level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
     TRUSTED_USERS = {} # add your own user id(s)
+    TRUSTED_TRUSTED_USERS = {}
 
     if interaction.user.id not in TRUSTED_USERS:
         logging.warning(f"WARNING - User {interaction.user.name} ({interaction.user.id}) tried to execute {code}")
@@ -145,6 +146,7 @@ async def eval(interaction: nextcord.Interaction, *, code: str) -> None:
         await interaction.send(f"User {interaction.user.name} was hoping to evaluate code :c")
         return
 
+    if interaction.user.id not in TRUSTED_TRUSTED_USERS:
         if any(keyword in code.lower() for keyword in ["for x in", "os.environ", "os.system", "eval(", "exec(", "shutil", "import os;", "builtins", "getattr", ".system", "__import__", "sys", "version_info", "shutdown", "rm -rf"]):
             logging.warning(f"CODE LOG - User {interaction.user.name} tried to execute:\n{code}")
             print(f"CODE LOG - User {interaction.user.name} tried to execute:\n{code}")
