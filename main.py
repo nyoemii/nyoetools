@@ -191,7 +191,7 @@ async def _execute():
     except Exception:
         # Send the error traceback to the channel
         await interaction.response.defer()
-        await interaction.send(f"Error: {traceback.format_exc()}")
+        await interaction.send(f"ˋˋˋbash\nError: {traceback.format_exc()}ˋˋˋ")
 
 @bot.slash_command(
     description="Gives you news about a specified topic",
