@@ -343,12 +343,69 @@ async def poll(interaction: nextcord.Interaction, question: str, option1: str, o
     ],
 )
 async def fastfetch(interaction: nextcord.Interaction):
-    os.system("/home/linuxbrew/.linuxbrew/bin/termshot --filename /home/nyoemi/nfss/output.png -- 'fastfetch --config /home/nyoemi/.config/fastfetch/config.jsonc'")
+    os.system("/home/linuxbrew/.linuxbrew/bin/termshot --filename /path/to/output -- 'fastfetch --config /home/nyoemi/.config/fastfetch/config.jsonc'")
 
-    file = "/home/nyoemi/nfss/output.png"
+    file = "" # set where the file is put in
 
     await interaction.response.defer()
     await interaction.send(file=nextcord.File(file))
+
+@bot.slash_command(
+    description="Get latest Commit of a specified GitHub Repo",
+    integration_types=[
+        IntegrationType.user_install,
+        IntegrationType.guild_install,
+    ],
+    contexts=[
+        InteractionContextType.guild,
+        InteractionContextType.bot_dm,
+        InteractionContextType.private_channel,
+    ],
+)
+async def github(interaction: nextcord.Interaction, repo: str, user: str, commitname: str):
+    base_url = f"https://api.github.com/repos/"
+    query = ""
+    user_id = interaction.user.id
+    username = interaction.user.name
+
+    query += f"{user}/{repo}/commits/{commitname}"
+    
+    try:
+        await interaction.response.defer()
+        response = requests.get(base_url + query)
+
+        if response.status_code == 200:
+            data = response.json()
+
+            commit = data['commit']
+            author = data['author']
+            files = data['files']
+
+            git_commit_hash = data.get("sha", {})
+            git_message = commit.get("message", "No message attached.")
+            git_avatar = author.get("avatar_url", {})
+            git_profile = author.get("html_url", {})
+                        
+        else:
+            await interaction.send("GitHub Repo not found.")
+        
+        embed = nextcord.Embed(
+            title=f"Information about {repo}",
+            description=f"by {user}",
+            color=nextcord.Color.green()
+        )
+
+        embed.add_field(name="Commit Hash", value=f"[{git_commit_hash}](https://github.com/{user}/{repo}/commits/{git_commit_hash})", inline=False)
+        embed.add_field(name="Message: ", value=f"{git_message}", inline=False)
+        embed.set_author(name=f"{user}", url=f"{git_profile}", icon_url=f"{git_avatar}")
+        embed.set_footer(icon_url="https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png", text=f"Command ran by {username}")
+
+        await interaction.send(embed=embed)
+    except Exception:
+        await interaction.send("An error occured.")
+    except requests.HTTPError:
+        await interaction.send(f"Error accessing GitHub: {response.status_code}")
+
 
 @bot.event
 async def on_ready():
