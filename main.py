@@ -406,6 +406,29 @@ async def github(interaction: nextcord.Interaction, repo: str, user: str, commit
     except requests.HTTPError:
         await interaction.send(f"Error accessing GitHub: {response.status_code}")
 
+@bot.slash_command(
+    description=":trol:",
+    integration_types=[
+        IntegrationType.user_install,
+        IntegrationType.guild_install,
+    ],
+    contexts=[
+        InteractionContextType.guild,
+        InteractionContextType.bot_dm,
+        InteractionContextType.private_channel,
+    ],
+)
+async def osu(interaction: nextcord.Interaction, clip: str = SlashOption(
+    choices={}, # your choices go here, written like this: {"option_name": "file_name", "option_name2": "file_name2"}
+    ),
+):
+    try:
+        file = f"{clip}"
+        await interaction.response.defer()
+        await interaction.send(file=nextcord.File(file))
+    except Exception:
+        await interaction.send("Error: File not found")
+
 
 @bot.event
 async def on_ready():
