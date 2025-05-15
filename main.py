@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from pytz import timezone
 from dotenv import load_dotenv
 from nextcord.ext import commands, tasks
-from nextcord import Embed
+from nextcord import Embed, SlashOption
 from nextcord import IntegrationType, Interaction, InteractionContextType
 from collections import defaultdict
 
