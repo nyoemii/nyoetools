@@ -1,0 +1,19 @@
+[project]
+name = "nyoetools"
+version = "0.1.0"
+description = "A discord bot"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "accesscontrol>=7.2",
+    "asyncio>=3.4.3",
+    "datetime>=5.5",
+    "dotenv>=0.9.9",
+    "nextcord>=3.1.0",
+    "pillow>=11.2.1",
+    "psutil>=7.0.0",
+    "pytz>=2025.2",
+    "qrcode>=8.2",
+    "requests>=2.32.3",
+    "restrictedpython>=8.0",
+]

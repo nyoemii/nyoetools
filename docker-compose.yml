@@ -8,6 +8,11 @@ services:
       dockerfile: ./Dockerfile
     develop:
       watch:
-        - action: sync+restart
-          path: ./main.py
-          target: /app/main.py
+        - action: sync
+          path: .
+          target: /app
+          ignore: 
+            - .venv/
+          
+        - action: rebuild
+          path: ./pyproject.toml
