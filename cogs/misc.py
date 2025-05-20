@@ -4,12 +4,15 @@ import os
 from subprocess import run
 from typing import List, Union
 import datetime
+import re
 
 from nextcord import Colour, Embed, \
     IntegrationType, Interaction, InteractionContextType, slash_command
 import nextcord
 from nextcord.ext.commands import Bot, Cog
 import psutil
+
+from . import discord_ansi_adapter
 
 newsapikey = os.environ["NEWS_API_KEY"]
 
@@ -76,7 +79,7 @@ class Misc(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def fastfetch(self, interaction: Interaction[Bot]):
+    async def fastfetch(self, interaction: Interaction[Bot], ansi: bool = False):
         file = "/app/ss.png" # set where the file is put in
         await interaction.response.defer()
         with open("skulley.txt", "w", encoding="ascii") as f:
@@ -98,6 +101,19 @@ class Misc(Cog):
             )
             await interaction.send(embed=embed)
             return
+
+        if ansi:
+            with open("skulley.txt", "r", encoding="ascii") as f:
+                await interaction.send(
+                    "```ansi\n" + \
+                    discord_ansi_adapter \
+                        .do_match(
+                            re.sub(r"\[[\d]*[ABCDHJKlhsu]", "", f.read())
+                            .replace(r"[0;39m", "[0;37m")
+                        ).replace("\x1B[0m8;;file:///\x1B[0m/\x1B[0m8;;\x1B[0m", "/") + \
+                    "\n```"
+                )
+                return
 
         p = run(
             ["./termshot",
