@@ -145,3 +145,33 @@ class Utils(Cog):
         except Exception: 
             await interaction.send("An error occured.")
             return
+        
+    @slash_command(
+        description="Checks if a Minecraft Name is available",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel,
+        ],
+    )
+    async def mcname(self, interaction: Interaction[Bot], username: str):
+        url = f"https://mcprofile.io/api/v1/java/username/{username}"
+
+        try:
+            await interaction.response.defer()
+            response = requests.get(url)
+            
+            if username.isalnum() == True:
+                if response.json().get('message') is None:
+                    await interaction.send(f'Username "{username}" is taken.')
+                else:
+                    await interaction.send(f'Username "{username}" is available!')
+            else:
+                await interaction.send(f'Username "{username}" contains invalid characters, therefore it is not available.')
+        except Exception as e:
+            await interaction.send("Error: Logs")
+            print(e)
