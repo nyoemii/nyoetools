@@ -175,3 +175,35 @@ class Utils(Cog):
         except Exception as e:
             await interaction.send("Error: Logs")
             print(e)
+
+    @slash_command(
+        description="Grabs a Users Avatar if possible.",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel,
+        ],
+    )
+    async def avatar(self, interaction: Interaction[Bot], user: nextcord.User):
+        await interaction.response.defer()
+
+        try:
+            userpfp = interaction.user.avatar
+            username = interaction.user.name
+
+            embed = nextcord.Embed(
+                title="Avatar fetched!",
+                description=f"{username}'s Avatar",
+                color=0x0000ff
+            )
+
+            embed.set_image(userpfp)
+
+            await interaction.send(embed=embed)
+        except Exception as e:
+            await interaction.send("Error: Check logs :3")
+            print(e)
