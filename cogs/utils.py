@@ -164,17 +164,23 @@ class Utils(Cog):
         try:
             await interaction.response.defer()
             response = requests.get(url)
-            
-            if username.isalnum() == True:
-                if response.json().get('message') is None:
-                    await interaction.send(f'Username "{username}" is taken.')
+
+            if username.replace("_", "").isalnum() == True:
+                if len(username) > 16:
+                    await interaction.send(f'Username "{username}" has too many letters.')
+                elif len(username) < 4:
+                    await interaction.send(f'Username "{username}" has not enough letters.')
                 else:
-                    await interaction.send(f'Username "{username}" is available!')
+                    if response.json().get('message') is None:
+                        await interaction.send(f'Username "{username}" is taken.')
+                    else:
+                        await interaction.send(f'Username "{username}" is available!')
             else:
                 await interaction.send(f'Username "{username}" contains invalid characters, therefore it is not available.')
         except Exception as e:
             await interaction.send("Error: Logs")
             print(e)
+
 
     @slash_command(
         description="Grabs a Users Avatar if possible.",
