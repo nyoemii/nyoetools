@@ -1,18 +1,24 @@
 services:
-  nyoetools:
-    image: nyoetools
-    volumes:
-    #  - /home/user:/home/user # add your own volumes to this
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-    develop:
-      watch:
-        - action: sync
-          path: .
-          target: /app
-          ignore: 
-            - .venv/
-          
-        - action: rebuild
-          path: ./pyproject.toml
+    nyoetools:
+        image: nyoetools
+        volumes:
+            # add your own volumes to this
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        environment:
+            BOT_TOKEN: ${BOT_TOKEN}
+            NEWS_API_KEY: ${NEWS_API_KEY}
+            OPENAI_API_KEY: ${OPENAI_API_KEY}
+            CLIENT_ID: ${CLIENT_ID}
+            CLIENT_SECRET: ${CLIENT_SECRET}
+        develop:
+            watch:
+                - action: sync+restart
+                  path: .
+                  target: /app
+                  ignore:
+                      - .venv/
+
+                - action: rebuild
+                  path: ./pyproject.toml

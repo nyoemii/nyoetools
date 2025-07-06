@@ -1,3 +1,4 @@
+# type: ignore
 from collections import defaultdict
 from typing import Any, List, Optional
 from nextcord import ButtonStyle, Embed, \
@@ -66,7 +67,7 @@ class Poll(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def poll(interaction: Interaction[Bot], question: str, option1: str, option2: str, option3: str = None, option4: str = None):
+    async def poll(self, interaction: Interaction[Bot], question: str, option1: str, option2: str, option3: str = None, option4: str = None):
         options = [opt for opt in [option1, option2, option3, option4] if opt is not None]
         poll_id = str(interaction.id)
 

@@ -1,7 +1,7 @@
 build:
-  docker compose build
-  docker compose down
+	docker compose build
+	docker compose down
 run:
-  docker compose up
-stop:
-  docker compose down
+	docker compose up --watch
+logs:
+	docker compose logs -f

@@ -1,3 +1,4 @@
+# type: ignore
 from types import CodeType
 from typing import Any, Optional
 import sys
@@ -83,7 +84,7 @@ class Eval(Cog):
         if not interaction.user:
             return
 
-        trusted_trusted_users = { 353736669138255874 }
+        trusted_trusted_users = {  } # add your own trusted users
 
         await interaction.response.defer(ephemeral=ephemeral)
 
@@ -102,7 +103,7 @@ class Eval(Cog):
             exec_namespace: dict[str, Any] = get_safe_globals()
             exec_namespace.update({
                 '_getattr_': guarded_getattr_safe,
-                '__name__': "plxspace",
+                '__name__': "nyoespace",
                 '__metaclass__': type
             })
             realcode = code + "\nresults = printed"

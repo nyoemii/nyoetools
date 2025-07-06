@@ -1,13 +1,18 @@
-from nextcord import File, IntegrationType, Interaction, InteractionContextType, \
-    SlashOption, slash_command
-from nextcord.exit.commands import Bot, Cog
+# type: ignore
+from nextcord import IntegrationType, Interaction, InteractionContextType, \
+    SlashOption, slash_command, Embed
+from nextcord.ext.commands import Bot, Cog
+import random
+import os
+import requests
+from openai import OpenAI
 
 class Fun(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
 
     @slash_command(
-        description=":trol:",
+        description="Talk to nyoe!",
         integration_types=[
             IntegrationType.user_install,
             IntegrationType.guild_install,
@@ -18,19 +23,27 @@ class Fun(Cog):
             InteractionContextType.private_channel
         ],
     )
-    async def osu(
-        self,
-        interaction: Interaction[Bot],
-        clip: str = SlashOption(
-            choices={} # your choices go here, written like this: {"option_name": "file_name", "option_name2": "file_name2"}
-        )
-    ):
+    async def nyoeai(self, interaction: Interaction[Bot], query: str):
+        await interaction.response.defer()
         try:
-            file = f"{clip}"
-            await interaction.response.defer()
-            await interaction.send(file=File(file))
-        except Exception:
-            await interaction.send("Error: File not found")
+            client = OpenAI(
+                api_key=os.environ["OPENAI_API_KEY"],
+                base_url="https://api.groq.com/openai/v1",
+            )
+
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": ""}, # your ai prompt
+                    {"role": "user", "content": f"{query}"}
+                ],
+                temperature=1.3,
+                stream=False
+            )
+            await interaction.send(response.choices[0].message.content)
+        except Exception as e:
+            await interaction.send("An error occured, check Logs")
+            print(e)
 
     @slash_command(
         description="Convert a specified Amount from a Currency to another Currency",
@@ -88,9 +101,9 @@ class Fun(Cog):
     )
     async def southpark(self, interaction: Interaction[Bot]):
         url = "https://southparkquotes.onrender.com/v1/quotes"
+        await interaction.response.defer()
 
         try:
-            await interaction.response.defer()
             response = requests.get(url)
 
             if response.status_code == 200:
@@ -134,7 +147,7 @@ class Fun(Cog):
 
                 embed = Embed(
                     title=f"{sides}-sided dice roll for {amount} times",
-                    description=f"You rolled: {','.join(rolls)}",
+                    description=f"You rolled: {', '.join(rolls)}",
                     color=0x00ff00
                 )
 
@@ -146,3 +159,18 @@ class Fun(Cog):
         except Exception as e:
             print(e)
             await interaction.send(f"An error occured:\n```{e}```")
+
+    @slash_command(
+        description="Say something as the Bot",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel
+        ],
+    )
+    async def meow(self, interaction: Interaction[Bot], treats: str):
+        await interaction.response.send_message(f"```ansi\n{treats}```")

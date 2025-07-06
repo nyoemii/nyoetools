@@ -6,14 +6,21 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "accesscontrol>=7.2",
+    "aiohttp>=3.11.18",
     "asyncio>=3.4.3",
     "datetime>=5.5",
     "dotenv>=0.9.9",
-    "nextcord>=3.1.0",
+    "logging>=0.4.9.6",
     "pillow>=11.2.1",
     "psutil>=7.0.0",
     "pytz>=2025.2",
     "qrcode>=8.2",
     "requests>=2.32.3",
     "restrictedpython>=8.0",
+    "sh>=2.2.2",
+    "openai>=1.79.0",
+    "nextcord",
 ]
+
+[tool.uv.sources]
+nextcord = { git = "https://github.com/nextcord/nextcord", rev = "0429ea4fc2cc7d372425359347c5f8550c41876c" }

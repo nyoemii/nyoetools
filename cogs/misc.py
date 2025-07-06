@@ -1,13 +1,15 @@
+# type: ignore
 import sys
-import requests
+import requests 
 import os
 from subprocess import run
 from typing import List, Union
 import datetime
 import re
+from dotenv import load_dotenv
 
 from nextcord import Colour, Embed, \
-    IntegrationType, Interaction, InteractionContextType, slash_command
+    IntegrationType, Interaction, InteractionContextType, slash_command, SlashOption
 import nextcord
 from nextcord.ext.commands import Bot, Cog
 import psutil
@@ -79,16 +81,15 @@ class Misc(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def fastfetch(self, interaction: Interaction[Bot], ansi: bool = False):
-        file = "/app/ss.png" # set where the file is put in
+    async def fastfetch(self, interaction: Interaction[Bot]):
         await interaction.response.defer()
         with open("skulley.txt", "w", encoding="ascii") as f:
             f.write("$ fastfetch\n")
             f.flush()
             p = run(
                 ["fastfetch",
-                 "--title-format", "{#bold_title}plx{#reset_default}@{#bold_title}plxbot",
-                 "--config","ff.json",
+                 "--title-format", "{#bold_title}nyoemi{#reset_default}@{#bold_title}nyoetools",
+                 "--config","config.jsonc",
                  "--pipe", "false"],
                 stdout=f,
                 check=False
@@ -102,34 +103,18 @@ class Misc(Cog):
             await interaction.send(embed=embed)
             return
 
-        if ansi:
-            with open("skulley.txt", "r", encoding="ascii") as f:
-                await interaction.send(
-                    "```ansi\n" + \
-                    discord_ansi_adapter \
-                        .do_match(
-                            re.sub(r"\[[\d]*[ABCDHJKlhsu]", "", f.read())
-                            .replace(r"[0;39m", "[0;37m")
-                        ).replace("\x1B[0m8;;file:///\x1B[0m/\x1B[0m8;;\x1B[0m", "/") + \
-                    "\n```"
-                )
-                return
 
-        p = run(
-            ["./termshot",
-             "--filename", file, 
-             "--", "cat skulley.txt"],
-            check = False
-        )
-        if p.returncode != 0:
-            embed = Embed(
-                color=Colour.red(),
-                title="Error",
-                description=f"```\n{p.stderr}\n```"
+        with open("skulley.txt", "r", encoding="ascii") as f:
+            await interaction.send(
+                "```ansi\n" + \
+                discord_ansi_adapter \
+                    .do_match(
+                        re.sub(r"\[[\d]*[ABCDHJKlhsu]", "", f.read())
+                        .replace(r"[0;39m", "[0;37m")
+                    ).replace("\x1B[0m8;;file:///\x1B[0m/\x1B[0m8;;\x1B[0m", "/") + \
+                "\n```"
             )
-            await interaction.send(embed=embed)
             return
-        await interaction.send(file=nextcord.File(file))
 
     @slash_command(
         description="Replies with Pong!",
@@ -151,10 +136,10 @@ class Misc(Cog):
         )
         await interaction.response.send_message(embed=embed)
 
-    @slash_command(description="Current system info")
+    @slash_command(description="Current system Info")
     async def info(self, iact: Interaction[Bot], ephemeral: bool = False):
         await iact.response.defer(ephemeral=ephemeral)
-        embed: Embed = Embed(title="System info", color=Colour.blue(), timestamp=datetime.datetime.now())
+        embed: Embed = Embed(title="System Info", color=Colour.blue(), timestamp=datetime.datetime.now())
         embed.add_field(name="CPU Usage", value=f"{psutil.cpu_percent()}%")
         vmem = psutil.virtual_memory()
         embed.add_field(name="Memory Usage", value=f"{vmem.percent:.1f}% ({size(vmem.total-vmem.available)}/{size(vmem.total)})")
@@ -179,7 +164,7 @@ class Misc(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def credit(self, interaction: Interaction[Bot]):
+    async def credits(self, interaction: Interaction[Bot]):
         embed = nextcord.Embed(
             title="Credits",
             color=nextcord.Color.blue()
@@ -187,12 +172,12 @@ class Misc(Cog):
 
         embed.add_field(
             name="Developers",
-            value="[nyoemii](https://nyoemii.dev)\n[plx](https://x.com/plzdonthaxme)",
+            value="[nyoemii](https://nyoemii.dev),\n[plx](https://x.com/plzdonthaxme)",
             inline=True
         )
         embed.add_field(
             name="Testers",
-            value="[Mineek](https://github.com/mineek)\n[omardotdev](https://omardotdev.github.io)",
+            value="[Mineek](https://github.com/mineek)\n[omardotdev](https://omardotdev.github.io),\nimpliedgg, [ie11/positron](https://cdstx4.xyz),\nmugman",
             inline=True
         )
 
