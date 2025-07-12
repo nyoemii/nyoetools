@@ -2,8 +2,13 @@
 from types import CodeType
 from typing import Any, Optional
 import sys
+import os
 import traceback
-import resource
+
+# this package is a linux only package
+if os.name == "posix":
+    import resource
+
 import logging
 from multiprocessing import Process, Manager, Pipe
 from datetime import datetime

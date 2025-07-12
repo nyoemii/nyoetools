@@ -1,7 +1,6 @@
 # type: ignore
 import io
-from nextcord import IntegrationType, Interaction, InteractionContextType, \
-    SlashOption, slash_command, Embed
+from nextcord import IntegrationType, Interaction, InteractionContextType, SlashOption, slash_command, Embed
 import nextcord
 from nextcord.ext.commands import Bot, Cog
 from qrcode import QRCode
@@ -14,6 +13,56 @@ from typing import Optional, Union
 import base64
 import json
 import pytz
+import asyncio
+import socket
+
+encodings = {
+    "Base16": "base64.b16encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base32": "base64.b32encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base64": "base64.b64encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base85": "base64.b85encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "HEX": "bytes.hex(\"{0}\".encode(\"utf-8\"))",
+}
+decodings = {
+    "Base16": "base64.b16decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base32": "base64.b32decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base64": "base64.b64decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base85": "base64.b85decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "HEX": "bytes.fromhex(\"{0}\").decode(\"utf-8\")",
+}
+
+def sync_is_tcp_port_open(ip_address: str, port: int) -> str:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(3)
+    try:
+        if sock.connect_ex((ip_address, port)) == 0:
+            return "Open"
+        else:
+            return "Closed"
+    except socket.gaierror:
+        return "Hostname could not be resolved"
+    except socket.error:
+        return "Connection Error"
+    finally:
+        sock.close()
+
+def sync_is_udp_port_open(ip_address: str, port: int) -> str:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(3)
+    try:
+        sock.sendto(b'', (ip_address, port))
+        sock.recvfrom(1024)
+        return "Open (Responded)"
+    except socket.timeout:
+        return "Open or Filtered"
+    except ConnectionRefusedError:
+        return "Closed (Connection Refused)"
+    except socket.gaierror:
+        return "Hostname could not be resolved"
+    except socket.error:
+        return "Connection Error"
+    finally:
+        sock.close()
 
 class Utils(Cog):
     def __init__(self, bot: Bot):
@@ -284,7 +333,7 @@ class Utils(Cog):
             print(e)
 
     @slash_command(
-        description="Encodes your message into base64.",
+        description="Encodes your message into various types.",
         integration_types=[
             IntegrationType.user_install,
             IntegrationType.guild_install,
@@ -295,17 +344,18 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def encode(self, interaction: Interaction[Bot], message: str):
+    async def encode(self, interaction: Interaction[Bot], message: str, method: str = SlashOption(choices=encodings.keys())):
         await interaction.response.defer()
 
         try:
-            await interaction.send(base64.b64encode(message.encode()).decode())
+            encoded_message = eval(encodings[method].format(message))
+            await interaction.send(f"```\n{encoded_message}\n```")
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
             print(e)
 
     @slash_command(
-        description="Decodes your message from base64.",
+        description="Decodes your message into various types.",
         integration_types=[
             IntegrationType.user_install,
             IntegrationType.guild_install,
@@ -316,11 +366,13 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def decode(self, interaction: Interaction[Bot], message: str):
+    async def decode(self, interaction: Interaction[Bot], message: str, method: str = SlashOption(choices=decodings.keys())):
         await interaction.response.defer()
 
         try:
-            await interaction.send(base64.b64decode(message.encode()).decode())
+            decoded_message = eval(decodings[method].format(message))
+
+            await interaction.send(f"```\n{decoded_message}\n```")
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
             print(e)
@@ -389,3 +441,61 @@ class Utils(Cog):
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
             print(e)
+
+    @slash_command(
+        description="Check the status of a network port.",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel,
+        ],
+    )
+    async def portstatus(self,
+                         interaction: Interaction[Bot],
+                         ip_address: str = nextcord.SlashOption(
+                            description="IP address or hostname to scan.",
+                            required=True
+                        ),
+                        port: int = nextcord.SlashOption(
+                            description="Port number to check.",
+                            required=True
+                        )):
+        await interaction.response.defer()
+
+        loop = asyncio.get_event_loop()
+
+        tcp_task = loop.run_in_executor(None, sync_is_tcp_port_open, ip_address, port)
+        udp_task = loop.run_in_executor(None, sync_is_udp_port_open, ip_address, port)
+
+        tcp_result_str = await tcp_task
+        udp_result_str = await udp_task
+
+        embed = nextcord.Embed(
+            title="Port Scan Results",
+            description=f"Showing status for `{ip_address}:{port}`",
+            color=0x3498DB
+        )
+
+        if "Open" in tcp_result_str:
+            tcp_status = f"✅ {tcp_result_str}"
+        elif "Closed" in tcp_result_str:
+            tcp_status = f"❌ {tcp_result_str}"
+        else:
+            tcp_status = f"⚠️ {tcp_result_str}"
+
+        if "Open" in udp_result_str:
+            udp_status = f"✅ {udp_result_str}"
+        elif "Closed" in udp_result_str:
+            udp_status = f"❌ {udp_result_str}"
+        else:
+            udp_status = f"⚠️ {udp_result_str}"
+
+        embed.add_field(name="TCP Status", value=tcp_status, inline=True)
+        embed.add_field(name="UDP Status", value=udp_status, inline=True)
+        embed.set_footer(text=f"Scan requested by {interaction.user.name}")
+
+        await interaction.followup.send(embed=embed)

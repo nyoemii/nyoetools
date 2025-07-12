@@ -7,3 +7,5 @@ skulley.txt
 eval_logs.txt
 logs/log_20.05.2025
 cogs/__pycache__
+/.idea
+/tests/

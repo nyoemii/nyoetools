@@ -1,11 +1,42 @@
 # type: ignore
-from nextcord import IntegrationType, Interaction, InteractionContextType, \
-    SlashOption, slash_command, Embed
+from nextcord import IntegrationType, Interaction, InteractionContextType, SlashOption, slash_command, Embed, User, Member
 from nextcord.ext.commands import Bot, Cog
+from typing import Optional, Union
 import random
 import os
+import time
 import requests
 from openai import OpenAI
+
+# Has to only be 25 items... :( thanks discord api
+currencies = {
+    "Australian Dollar": "AUD",
+    "Brazilian Real": "BRL",
+    "Canadian Dollar": "CAD",
+    "Swiss Franc": "CHF",
+    "Chinese Renminbi Yuan": "CNY",
+    "Czech Koruna": "CZK",
+    "Euro": "EUR",
+    "British Pound": "GBP",
+    "Croatian Kuna": "HRK",
+    "Indonesian Rupiah": "IDR",
+    "Indian Rupee": "INR",
+    "Japanese Yen": "JPY",
+    "South Korean Won": "KRW",
+    "Mexican Peso": "MXN",
+    "Norwegian Krone": "NOK",
+    "New Zealand Dollar": "NZD",
+    "Polish Zloty": "PLN",
+    "Romanian Leu": "RON",
+    "Russian Ruble": "RUB",
+    "Swedish Krona": "SEK",
+    "Singapore Dollar": "SGD",
+    "Thai Baht": "THB",
+    "Turkish Lira": "TRY",
+    "United States Dollar": "USD",
+    "South African Rand": "ZAR"
+}
+
 
 class Fun(Cog):
     def __init__(self, bot: Bot):
@@ -34,7 +65,7 @@ class Fun(Cog):
             response = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": ""}, # your ai prompt
+                    {"role": "system", "content": ""},  # your ai prompt
                     {"role": "user", "content": f"{query}"}
                 ],
                 temperature=1.3,
@@ -58,34 +89,34 @@ class Fun(Cog):
         ],
     )
     async def currency(self, interaction: Interaction[Bot], amount: int, currencyfrom: str = SlashOption(
-        choices={"Australian Dollar": "AUD", "Bulgarian Lev": "BGN", "Brazilian Real": "BRL", "Canadian Dollar": "CAD", "Swiss Franc": "CHF", "Chinese Renminbi Yuan": "CNY", "Czech Koruna": "CZK", "Danish Krone": "DKK", "Euro": "EUR", "British Pound": "GBP", "Hong Kong Dollar": "HKD", "Hungarian Forint": "HUF", "Indonesian Rupiah": "IDR", "Japanese Yen": "JPY", "South Korean Won": "KRW", "Norwegian Krone": "NOK", "Polish Zloty": "PLN", "Swedish Krona": "SEK", "Turkish Lira": "TRY", "United States Dollar": "USD"}), currencyto: str = SlashOption(
-        choices={"Australian Dollar": "AUD", "Bulgarian Lev": "BGN", "Brazilian Real": "BRL", "Canadian Dollar": "CAD", "Swiss Franc": "CHF", "Chinese Renminbi Yuan": "CNY", "Czech Koruna": "CZK", "Danish Krone": "DKK", "Euro": "EUR", "British Pound": "GBP", "Hong Kong Dollar": "HKD", "Hungarian Forint": "HUF", "Indonesian Rupiah": "IDR", "Japanese Yen": "JPY", "South Korean Won": "KRW", "Norwegian Krone": "NOK", "Polish Zloty": "PLN", "Swedish Krona": "SEK", "Turkish Lira": "TRY", "United States Dollar": "USD"})):
-            url = f"https://api.frankfurter.dev/v1/latest?base={currencyfrom}&symbols={currencyto}"
+        choices=currencies), currencyto: str = SlashOption(
+        choices=currencies)):
+        url = f"https://api.frankfurter.dev/v1/latest?base={currencyfrom}&symbols={currencyto}"
 
-            try:
-                await interaction.response.defer()
-                response = requests.get(url)
+        try:
+            await interaction.response.defer()
+            response = requests.get(url)
 
-                if response.status_code == 200:
-                    data = response.json()
+            if response.status_code == 200:
+                data = response.json()
 
-                    rate = data['rates'][f'{currencyto}']
-                    raw_result = amount * rate
-                    result = str(round(raw_result, 2))
+                rate = data['rates'][f'{currencyto}']
+                raw_result = amount * rate
+                result = str(round(raw_result, 2))
 
-                    embed = Embed(
-                        title=f"Conversion from {currencyfrom} to {currencyto}",
-                        description=f"```{amount} * {rate} = {result} {currencyto}```",
-                        color=0x00ff00
-                    ).set_footer(
-                        text=f"Executed by {interaction.user.name}"
-                    )
+                embed = Embed(
+                    title=f"Conversion from {currencyfrom} to {currencyto}",
+                    description=f"```{amount} * {rate} = {result} {currencyto}```",
+                    color=0x00ff00
+                ).set_footer(
+                    text=f"Executed by {interaction.user.name}"
+                )
 
-                    await interaction.send(embed=embed)
-                    return
-            except Exception as e:
-                await interaction.send("Conversion has failed. Check logs.")
-                print(e)
+                await interaction.send(embed=embed)
+                return
+        except Exception as e:
+            await interaction.send("Conversion has failed. Check logs.")
+            print(e)
 
     @slash_command(
         description="uhhhh, smoking is bad mkayyy",
@@ -174,3 +205,32 @@ class Fun(Cog):
     )
     async def meow(self, interaction: Interaction[Bot], treats: str):
         await interaction.response.send_message(f"```ansi\n{treats}```")
+
+    @slash_command(
+        description="Rates the cuteness of someone.",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel
+        ],
+    )
+    async def cuteness(self, interaction: Interaction[Bot], user: Union[User, Member], is_random: str = SlashOption(name="random", choices=["Yes", "No"], required=False, default="No")):
+        try:
+            _user: int = user.id
+
+            if is_random == "Yes":
+                random_number: int = lambda: sum([int(str(time.time_ns())[14:-2]) for _ in range(100)])
+                _user += random_number()
+
+            cute_level = _user % 101
+
+            await interaction.response.send_message(f"{user.mention} is **{cute_level}%** cute")
+        except TypeError:
+            await interaction.send(f"An error occured.\nIs the bot in the guild?", ephemeral=True)
+        except Exception as e:
+            print(e)
+            await interaction.send(f"An error occured:\n```{e}```")
