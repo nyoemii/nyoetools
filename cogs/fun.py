@@ -231,7 +231,7 @@ class Fun(Cog):
 
             cute_level = _user % 101
 
-            message = f"{0} is **{1}%{2}** cute{3}".format(user.mention, cute_level, "*" if is_random else "", "\n-# Randomness is being used" if is_random else "")
+            message = "{0} is **{1}%{2}** cute{3}".format(user.mention, cute_level, "*" if is_random else "", "\n-# Randomness is being used" if is_random else "")
 
             await interaction.response.send_message(message)
         except TypeError:
