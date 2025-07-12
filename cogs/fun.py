@@ -1,5 +1,5 @@
 # type: ignore
-from nextcord import IntegrationType, Interaction, InteractionContextType, SlashOption, slash_command, Embed, User
+from nextcord import IntegrationType, Interaction, InteractionContextType, SlashOption, slash_command, Embed, User, Member
 from nextcord.ext.commands import Bot, Cog
 import random
 import os
@@ -217,7 +217,7 @@ class Fun(Cog):
             InteractionContextType.private_channel
         ],
     )
-    async def cuteness(self, interaction: Interaction[Bot], user: User, is_random: str = SlashOption(name="random", choices=["Yes", "No"], required=False, default="No")):
+    async def cuteness(self, interaction: Interaction[Bot], user: Union[User, Member], is_random: str = SlashOption(name="random", choices=["Yes", "No"], required=False, default="No")):
         try:
             _user: int = user.id
 
