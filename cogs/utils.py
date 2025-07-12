@@ -18,6 +18,20 @@ import pytz
 class Utils(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.encodings = {
+            "Base16": base64.b16encode,
+            "Base32": base64.b32encode,
+            "Base64": base64.b64encode,
+            "Base85": base64.b85encode,
+            "HEX": bytes.hex,
+        }
+        self.decodings = {
+            "Base16": base64.b16decode,
+            "Base32": base64.b32decode,
+            "Base64": base64.b64decode,
+            "Base85": base64.b85decode,
+            "HEX": bytes.fromhex,
+        }
 
     @slash_command(
         description="Creates a QR Code for your defined URL or Text",
@@ -284,7 +298,7 @@ class Utils(Cog):
             print(e)
 
     @slash_command(
-        description="Encodes your message into base64.",
+        description="Encodes your message into various types.",
         integration_types=[
             IntegrationType.user_install,
             IntegrationType.guild_install,
@@ -295,17 +309,22 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def encode(self, interaction: Interaction[Bot], message: str):
+    async def encode(self, interaction: Interaction[Bot], message: str, method: str = SlashOption(choices=self.encodings)):
         await interaction.response.defer()
 
+        encoded_message = self.encodings[method](message.encode("utf-8"))
+
+        if type(encoded_message) == bytes:
+            encoded_message = encoded_message.decode("utf-8")
+
         try:
-            await interaction.send(base64.b64encode(message.encode()).decode())
+            await interaction.send(f"```\n{encoded_message}\n```")
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
             print(e)
 
     @slash_command(
-        description="Decodes your message from base64.",
+        description="Decodes your message into various types.",
         integration_types=[
             IntegrationType.user_install,
             IntegrationType.guild_install,
@@ -316,11 +335,18 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def decode(self, interaction: Interaction[Bot], message: str):
+    async def decode(self, interaction: Interaction[Bot], message: str, method: str = SlashOption(choices=self.decodings)):
         await interaction.response.defer()
 
+        msg = message if method == "HEX" else message.encode("utf-8")
+
+        decoded_message = self.decodings[method](msg)
+
+        if type(decoded_message) == bytes:
+            decoded_message = decoded_message.decode("utf-8")
+
         try:
-            await interaction.send(base64.b64decode(message.encode()).decode())
+            await interaction.send(f"```\n{decoded_message}\n```")
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
             print(e)
