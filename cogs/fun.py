@@ -1,6 +1,7 @@
 # type: ignore
 from nextcord import IntegrationType, Interaction, InteractionContextType, SlashOption, slash_command, Embed, User, Member
 from nextcord.ext.commands import Bot, Cog
+from typing import Optional, Union
 import random
 import os
 import time
