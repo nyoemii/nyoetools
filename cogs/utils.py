@@ -15,23 +15,24 @@ import base64
 import json
 import pytz
 
+encodings = {
+    "Base16": "base64.b16encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base32": "base64.b32encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base64": "base64.b64encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base85": "base64.b85encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "HEX": "bytes.hex(\"{0}\".encode(\"utf-8\"))",
+}
+decodings = {
+    "Base16": "base64.b16decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base32": "base64.b32decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base64": "base64.b64decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "Base85": "base64.b85decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
+    "HEX": "bytes.fromhex(\"{0}\").decode(\"utf-8\")",
+}
+
 class Utils(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.encodings = {
-            "Base16": base64.b16encode,
-            "Base32": base64.b32encode,
-            "Base64": base64.b64encode,
-            "Base85": base64.b85encode,
-            "HEX": bytes.hex,
-        }
-        self.decodings = {
-            "Base16": base64.b16decode,
-            "Base32": base64.b32decode,
-            "Base64": base64.b64decode,
-            "Base85": base64.b85decode,
-            "HEX": bytes.fromhex,
-        }
 
     @slash_command(
         description="Creates a QR Code for your defined URL or Text",
@@ -309,15 +310,11 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def encode(self, interaction: Interaction[Bot], message: str, method: str = SlashOption(choices=self.encodings)):
+    async def encode(self, interaction: Interaction[Bot], message: str, method: str = SlashOption(choices=encodings.keys())):
         await interaction.response.defer()
 
-        encoded_message = self.encodings[method](message.encode("utf-8"))
-
-        if type(encoded_message) == bytes:
-            encoded_message = encoded_message.decode("utf-8")
-
         try:
+            encoded_message = eval(encodings[method].format(message))
             await interaction.send(f"```\n{encoded_message}\n```")
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
@@ -335,17 +332,12 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def decode(self, interaction: Interaction[Bot], message: str, method: str = SlashOption(choices=self.decodings)):
+    async def decode(self, interaction: Interaction[Bot], message: str, method: str = SlashOption(choices=decodings.keys())):
         await interaction.response.defer()
 
-        msg = message if method == "HEX" else message.encode("utf-8")
-
-        decoded_message = self.decodings[method](msg)
-
-        if type(decoded_message) == bytes:
-            decoded_message = decoded_message.decode("utf-8")
-
         try:
+            decoded_message = eval(decodings[method].format(message))
+
             await interaction.send(f"```\n{decoded_message}\n```")
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
