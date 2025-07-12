@@ -10,6 +10,40 @@ from openai import OpenAI
 class Fun(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
+        self.currencies = {
+            "Australian Dollar": "AUD",
+            "Bulgarian Lev": "BGN",
+            "Brazilian Real": "BRL",
+            "Canadian Dollar": "CAD",
+            "Swiss Franc": "CHF",
+            "Chinese Renminbi Yuan": "CNY",
+            "Czech Koruna": "CZK",
+            "Danish Krone": "DKK",
+            "Euro": "EUR",
+            "British Pound": "GBP",
+            "Hong Kong Dollar": "HKD",
+            "Croatian Kuna": "HRK",
+            "Hungarian Forint": "HUF",
+            "Indonesian Rupiah": "IDR",
+            "Indian Rupee": "INR",
+            "Icelandic Krona": "ISK",
+            "Japanese Yen": "JPY",
+            "South Korean Won": "KRW",
+            "Mexican Peso": "MXN",
+            "Malaysian Ringgit": "MYR",
+            "Norwegian Krone": "NOK",
+            "New Zealand Dollar": "NZD",
+            "Philippine Peso": "PHP",
+            "Polish Zloty": "PLN",
+            "Romanian Leu": "RON",
+            "Russian Ruble": "RUB",
+            "Swedish Krona": "SEK",
+            "Singapore Dollar": "SGD",
+            "Thai Baht": "THB",
+            "Turkish Lira": "TRY",
+            "United States Dollar": "USD",
+            "South African Rand": "ZAR"
+        }
 
     @slash_command(
         description="Talk to nyoe!",
@@ -34,7 +68,7 @@ class Fun(Cog):
             response = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": ""}, # your ai prompt
+                    {"role": "system", "content": ""},  # your ai prompt
                     {"role": "user", "content": f"{query}"}
                 ],
                 temperature=1.3,
@@ -58,34 +92,34 @@ class Fun(Cog):
         ],
     )
     async def currency(self, interaction: Interaction[Bot], amount: int, currencyfrom: str = SlashOption(
-        choices={"Australian Dollar": "AUD", "Bulgarian Lev": "BGN", "Brazilian Real": "BRL", "Canadian Dollar": "CAD", "Swiss Franc": "CHF", "Chinese Renminbi Yuan": "CNY", "Czech Koruna": "CZK", "Danish Krone": "DKK", "Euro": "EUR", "British Pound": "GBP", "Hong Kong Dollar": "HKD", "Hungarian Forint": "HUF", "Indonesian Rupiah": "IDR", "Japanese Yen": "JPY", "South Korean Won": "KRW", "Norwegian Krone": "NOK", "Polish Zloty": "PLN", "Swedish Krona": "SEK", "Turkish Lira": "TRY", "United States Dollar": "USD"}), currencyto: str = SlashOption(
-        choices={"Australian Dollar": "AUD", "Bulgarian Lev": "BGN", "Brazilian Real": "BRL", "Canadian Dollar": "CAD", "Swiss Franc": "CHF", "Chinese Renminbi Yuan": "CNY", "Czech Koruna": "CZK", "Danish Krone": "DKK", "Euro": "EUR", "British Pound": "GBP", "Hong Kong Dollar": "HKD", "Hungarian Forint": "HUF", "Indonesian Rupiah": "IDR", "Japanese Yen": "JPY", "South Korean Won": "KRW", "Norwegian Krone": "NOK", "Polish Zloty": "PLN", "Swedish Krona": "SEK", "Turkish Lira": "TRY", "United States Dollar": "USD"})):
-            url = f"https://api.frankfurter.dev/v1/latest?base={currencyfrom}&symbols={currencyto}"
+        choices=self.currencies), currencyto: str = SlashOption(
+        choices=self.currencies)):
+        url = f"https://api.frankfurter.dev/v1/latest?base={currencyfrom}&symbols={currencyto}"
 
-            try:
-                await interaction.response.defer()
-                response = requests.get(url)
+        try:
+            await interaction.response.defer()
+            response = requests.get(url)
 
-                if response.status_code == 200:
-                    data = response.json()
+            if response.status_code == 200:
+                data = response.json()
 
-                    rate = data['rates'][f'{currencyto}']
-                    raw_result = amount * rate
-                    result = str(round(raw_result, 2))
+                rate = data['rates'][f'{currencyto}']
+                raw_result = amount * rate
+                result = str(round(raw_result, 2))
 
-                    embed = Embed(
-                        title=f"Conversion from {currencyfrom} to {currencyto}",
-                        description=f"```{amount} * {rate} = {result} {currencyto}```",
-                        color=0x00ff00
-                    ).set_footer(
-                        text=f"Executed by {interaction.user.name}"
-                    )
+                embed = Embed(
+                    title=f"Conversion from {currencyfrom} to {currencyto}",
+                    description=f"```{amount} * {rate} = {result} {currencyto}```",
+                    color=0x00ff00
+                ).set_footer(
+                    text=f"Executed by {interaction.user.name}"
+                )
 
-                    await interaction.send(embed=embed)
-                    return
-            except Exception as e:
-                await interaction.send("Conversion has failed. Check logs.")
-                print(e)
+                await interaction.send(embed=embed)
+                return
+        except Exception as e:
+            await interaction.send("Conversion has failed. Check logs.")
+            print(e)
 
     @slash_command(
         description="uhhhh, smoking is bad mkayyy",
