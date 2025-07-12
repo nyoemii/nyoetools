@@ -7,9 +7,18 @@ from time import gmtime, strftime
 
 from cogs.osu import OsuBeatmapConverter
 
+path = "/home/nyoemii/userapp/config.jsonc"
+
+# windows development is real
+if os.name == "nt":
+    import dotenv
+    dotenv.load_dotenv()
+
+    path = "tests/config.jsonc"
+
 bot_token = os.environ["BOT_TOKEN"]
 
-with open("/home/nyoemii/userapp/config.jsonc", 'w', encoding="ascii") as ffconfig:
+with open(path, 'w', encoding="ascii") as ffconfig:
     ffconfig.write("""
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
