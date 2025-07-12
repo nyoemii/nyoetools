@@ -16,6 +16,10 @@ import psutil
 
 from . import discord_ansi_adapter
 
+if os.name == "nt":
+    import dotenv
+    dotenv.load_dotenv()
+
 newsapikey = os.environ["NEWS_API_KEY"]
 
 class HumanBytes:

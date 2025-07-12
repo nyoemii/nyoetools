@@ -2,6 +2,7 @@
 from types import CodeType
 from typing import Any, Optional
 import sys
+import os
 import traceback
 
 # this package is a linux only package
