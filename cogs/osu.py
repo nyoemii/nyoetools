@@ -133,7 +133,7 @@ class OsuBeatmapConverter(commands.Cog):
         if message.author == self.bot.user:
             return
 
-        pattern = r'osu://dl/(\d+)'
+        pattern = r'(?:beatmapsets|b)/(\d+)'
         matches = re.findall(pattern, message.content)
 
         if matches:
