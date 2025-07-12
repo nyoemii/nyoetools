@@ -223,12 +223,17 @@ class Fun(Cog):
             _user: int = user.id
 
             if is_random == "Yes":
+                is_random = True
                 random_number: int = lambda: sum([int(str(time.time_ns())[14:-2]) for _ in range(100)])
                 _user += random_number()
+            else:
+                is_random = False
 
             cute_level = _user % 101
 
-            await interaction.response.send_message(f"{user.mention} is **{cute_level}%** cute")
+            message = f"{0} is **{1}%{2}** cute{3}".format(user.mention, cute_level, "*" if is_random else "", "\n-# Randomness is being used" if is_random else "")
+
+            await interaction.response.send_message(message)
         except TypeError:
             await interaction.send(f"An error occured.\nIs the bot in the guild?", ephemeral=True)
         except Exception as e:
