@@ -437,7 +437,19 @@ class Utils(Cog):
             timezone = users[str(user_id)]["timezone"]
             current_time = datetime.now(pytz.timezone(timezone))
             current_time_local = current_time.astimezone(pytz.timezone(timezone))
-            await interaction.send(f"Current local time for <@{user_id}> is {current_time_local.strftime('%Y-%m-%d %H:%M:%S')}.")
+            command_timezone = users.get(str(interaction.user.id), {}).get("timezone")
+            diff_str = ""
+            if command_timezone and command_timezone != timezone:
+                now_utc = datetime.utcnow()
+                user_offset = pytz.timezone(timezone).utcoffset(now_utc)
+                command_offset = pytz.timezone(command_timezone).utcoffset(now_utc)
+                if user_offset is not None and command_offset is not None:
+                    time_diff = (user_offset - command_offset).total_seconds() / 3600
+                    if abs(time_diff) >= 0.05:
+                        diff_str = f" (Difference: {time_diff:+.1f} hours from your timezone)"
+            await interaction.send(
+                f"Current local time for <@{user_id}> is {current_time_local.strftime('%Y-%m-%d %H:%M:%S')}.{diff_str}"
+            )
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
             print(e)
