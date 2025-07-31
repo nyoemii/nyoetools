@@ -511,3 +511,60 @@ class Utils(Cog):
         embed.set_footer(text=f"Scan requested by {interaction.user.name}")
 
         await interaction.followup.send(embed=embed)
+
+    @slash_command(
+        description="Look for a Term on the Urban Dictionary.",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel,
+        ],
+    )
+    async def urban(self,
+                         interaction: Interaction[Bot],
+                         term: str = nextcord.SlashOption(
+                            description="Term to look for",
+                            required=True
+                        )):
+        url = f"https://unofficialurbandictionaryapi.com/api/search?term={term}&strict=true&"
+
+        try:
+            await interaction.response.defer()
+            response = requests.get(url)
+            
+            if response.status_code == 200:
+                data = response.json()
+
+                if 'found' in data:
+                    result = data["data"][0]
+
+                    word = result["word"]
+                    meaning = result["meaning"]
+                    example = result["example"]
+                    contributor = result["contributor"]
+                    date = result["date"]
+
+                    embed = nextcord.Embed(
+                        title="Urban Dictionary Lookup",
+                        description=f"Showing the top result for {term}",
+                        color=0x3498DB
+                    )
+
+                    embed.set_author(name=contributor)
+                    embed.add_field(name="Meaning", value=meaning[:300], inline=False)
+                    embed.add_field(name="Example", value=f"`{example[:500]}`", inline=False)
+                    embed.set_footer(text=f"Posted on Urban Dictionary on {date}")
+
+                    await interaction.send(embed=embed)
+                
+                else:
+                    await interaction.send(f"No Search Result for {term}")
+            else:
+                await interaction.send("Couldn't make the API call.")
+        except Exception as e:
+            print(e)
+            await interaction.send(f"An error occured.\n```bash\n{e}```")
