@@ -531,10 +531,11 @@ class Utils(Cog):
                             required=True
                         )):
         url = f"https://unofficialurbandictionaryapi.com/api/search?term={term}&strict=true&"
+        formatted = url.replace(" ", "_")
 
         try:
             await interaction.response.defer()
-            response = requests.get(url)
+            response = requests.get(formatted)
             
             if response.status_code == 200:
                 data = response.json()
@@ -563,8 +564,13 @@ class Utils(Cog):
                 
                 else:
                     await interaction.send(f"No Search Result for {term}")
-            else:
-                await interaction.send("Couldn't make the API call.")
+            elif response.status_code == 404:
+                data = response.json()
+                if 'message' in data:
+                    message = data["message"]
+                    formatted2 = message.replace("this word", f"{term}")
+                    await interaction.send(formatted2 + ".")
+                print(formatted)
         except Exception as e:
             print(e)
             await interaction.send(f"An error occured.\n```bash\n{e}```")
