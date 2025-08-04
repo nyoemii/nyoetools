@@ -574,3 +574,50 @@ class Utils(Cog):
         except Exception as e:
             print(e)
             await interaction.send(f"An error occured.\n```bash\n{e}```")
+
+    @slash_command(
+        description="HTTP Cat Error Code",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel,
+        ],
+    )
+    async def httpcat(self,
+                         interaction: Interaction[Bot],
+                         error_code: int = nextcord.SlashOption(
+                            description="Error Code",
+                            required=True
+                        )):
+        await interaction.response.defer()
+        try:
+            img = f"https://http.cat/{error_code}"
+            meow = requests.get(img)
+            if error_code >= 100 and error_code < 200:
+                color = 0x0000FF
+            elif error_code >= 200 and error_code < 300:
+                color = 0x00FF00
+            elif error_code >= 300 and error_code < 400:
+                color = 0xFFFF00
+            elif error_code >= 400 and error_code < 500:
+                color = 0xFF0000
+            elif error_code >= 500 and error_code < 600:
+                color = 0x400000
+
+            if meow.status_code == 200:
+                embed = nextcord.Embed(
+                    color=color
+                )
+        
+                embed.set_image(url=img)
+
+                await interaction.send(embed=embed)
+            else:
+                await interaction.send(f"The Error Code `{error_code}` is not valid.")
+        except Exception as e:
+            print(e)
+            await interaction.send(f"An error occured.\n```bash\n{e}```")
