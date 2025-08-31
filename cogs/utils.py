@@ -603,6 +603,8 @@ class Utils(Cog):
                 color = 0x00FF00
             elif error_code >= 300 and error_code < 400:
                 color = 0xFFFF00
+            elif error_code == 420:
+                color = 0x008000
             elif error_code >= 400 and error_code < 500:
                 color = 0xFF0000
             elif error_code >= 500 and error_code < 600:
