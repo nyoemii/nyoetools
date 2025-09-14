@@ -623,3 +623,44 @@ class Utils(Cog):
         except Exception as e:
             print(e)
             await interaction.send(f"An error occured.\n```bash\n{e}```")
+
+    @slash_command(
+        description="Get a Minecraft Skin using the username",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel,
+        ],
+    )
+    async def mcskin(self,
+                         interaction: Interaction[Bot],
+                         minecraft_name: str = nextcord.SlashOption(
+                            description="Minecraft Name",
+                            required=True
+                        )):
+        await interaction.response.defer()
+
+        try:
+            if re.match(r'[a-zA-Z0-9_]', minecraft_name):
+                url = f"https://vzge.me/full/384/{minecraft_name}"
+            else:
+                await interaction.send("Invalid Minecraft Username.")
+
+            embed = nextcord.Embed(
+                title=f"{minecraft_name}'s Skin",
+                description=f"[Download Skin](https://mineskin.eu/download/{minecraft_name})",
+                color=0x008000
+            )
+
+            embed.set_image(url)
+
+            await interaction.send(embed=embed)
+        except HTTPError:
+            await interaction.send("The API is currently unavailable.")
+        except Exception as e:
+            print(e)
+            await interaction.send(f"An error occured:\n```bash\n{e}```")
