@@ -6,7 +6,6 @@ from subprocess import run
 from typing import List, Union
 import datetime
 import re
-from dotenv import load_dotenv
 
 from nextcord import Colour, Embed, \
     IntegrationType, Interaction, InteractionContextType, slash_command, SlashOption
@@ -15,12 +14,6 @@ from nextcord.ext.commands import Bot, Cog
 import psutil
 
 from . import discord_ansi_adapter
-
-if os.name == "nt":
-    import dotenv
-    dotenv.load_dotenv()
-
-newsapikey = os.environ["NEWS_API_KEY"]
 
 class HumanBytes:
     METRIC_LABELS: List[str] = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
@@ -74,7 +67,7 @@ class Misc(Cog):
         self.proc = psutil.Process()
 
     @slash_command(
-        description="Fastfetch :3",
+        description="Replies with Pong!",
         integration_types=[
             IntegrationType.user_install,
             IntegrationType.guild_install,
@@ -85,43 +78,16 @@ class Misc(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def fastfetch(self, interaction: Interaction[Bot]):
-        await interaction.response.defer()
-        with open("skulley.txt", "w", encoding="ascii") as f:
-            f.write("$ fastfetch\n")
-            f.flush()
-            p = run(
-                ["fastfetch",
-                 "--title-format", "{#bold_title}nyoemi{#reset_default}@{#bold_title}nyoetools",
-                 "--config","config.jsonc",
-                 "--pipe", "false"],
-                stdout=f,
-                check=False
-            )
-        if p.returncode != 0:
-            embed = Embed(
-                color=Colour.red(),
-                title="Error",
-                description=f"```\n{p.stderr}\n```"
-            )
-            await interaction.send(embed=embed)
-            return
-
-
-        with open("skulley.txt", "r", encoding="ascii") as f:
-            await interaction.send(
-                "```ansi\n" + \
-                discord_ansi_adapter \
-                    .do_match(
-                        re.sub(r"\[[\d]*[ABCDHJKlhsu]", "", f.read())
-                        .replace(r"[0;39m", "[0;37m")
-                    ).replace("\x1B[0m8;;file:///\x1B[0m/\x1B[0m8;;\x1B[0m", "/") + \
-                "\n```"
-            )
-            return
+    async def ping(self, interaction: Interaction[Bot]):
+        embed: Embed = Embed(
+            color=Colour.green(),
+            title="Bone fetched! :3",
+            description=f"-# **Latency**: {self.bot.latency * 1000:.1f} ms • **Memory usage**: {size(self.proc.memory_info().rss)}"
+        )
+        await interaction.response.send_message(embed=embed)
 
     @slash_command(
-        description="Replies with Pong!",
+        description="Ping!",
         integration_types=[
             IntegrationType.user_install,
             IntegrationType.guild_install,
@@ -140,7 +106,18 @@ class Misc(Cog):
         )
         await interaction.response.send_message(embed=embed)
 
-    @slash_command(description="Current system Info")
+    @slash_command(
+        description="Current system Info",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel,
+        ],
+    )
     async def info(self, iact: Interaction[Bot], ephemeral: bool = False):
         await iact.response.defer(ephemeral=ephemeral)
         embed: Embed = Embed(title="System Info", color=Colour.blue(), timestamp=datetime.datetime.now())
@@ -153,6 +130,7 @@ class Misc(Cog):
         embed.add_field(name="Network Stats", value=f"Sent: {size(nctrs.bytes_sent)}\nReceived: {size(nctrs.bytes_recv)}")
         embed.add_field(name="Uptime", value=f"<t:{psutil.boot_time():.0f}:R>")
         embed.add_field(name="Python Version", value=f"`{sys.version}`")
+        embed.add_field(name="Nextcord Version", value="[3.1.0+g0429ea4f](https://github.com/nextcord/nextcord?rev=0429ea4fc2cc7d372425359347c5f8550c41876c#0429ea4fc2cc7d372425359347c5f8550c41876c)")
         await iact.send(embed=embed, ephemeral=ephemeral)
 
     @slash_command(
@@ -176,12 +154,12 @@ class Misc(Cog):
 
         embed.add_field(
             name="Developers",
-            value="[nyoemii](https://nyoemii.dev),\n[plx](https://x.com/plzdonthaxme)",
+            value="[nyoemii](https://nyoemii.dev), [plx](https://x.com/plzdonthaxme), [secp192k1](https://github.com/secp192k1)",
             inline=True
         )
         embed.add_field(
             name="Testers",
-            value="[Mineek](https://github.com/mineek)\n[omardotdev](https://omardotdev.github.io),\nimpliedgg, [ie11/positron](https://cdstx4.xyz),\nmugman",
+            value="[Mineek](https://github.com/mineek), [omardotdev](https://omardotdev.github.io), impliedgg, [ie11/positron](https://cdstx4.xyz), mugman",
             inline=True
         )
 

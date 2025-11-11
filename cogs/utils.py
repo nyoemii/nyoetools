@@ -1,20 +1,95 @@
 # type: ignore
-import io
-from nextcord import IntegrationType, Interaction, InteractionContextType, SlashOption, slash_command, Embed
+from nextcord import IntegrationType, Interaction, InteractionContextType, SlashOption, slash_command, Embed, InteractionMessage
 import nextcord
+from nextcord.ext import commands
 from nextcord.ext.commands import Bot, Cog
 from qrcode import QRCode
 from qrcode.constants import ERROR_CORRECT_L
 import requests
 from requests import HTTPError
 import os
+import re
 from datetime import datetime, timedelta
 from typing import Optional, Union
 import base64
 import json
 import pytz
-import asyncio
-import socket
+
+def get_repo_languages(owner, repo):
+    url = f"https://api.github.com/repos/{owner}/{repo}/languages"
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+
+        return response.json()
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching data: {e}")
+        return None
+
+def analyze_languages(languages_data):
+    if not languages_data:
+        return None
+
+    total_bytes = sum(languages_data.values())
+
+    analysis = {
+        'total_bytes': total_bytes,
+        'languages': {}
+    }
+
+    for language, bytes_count in languages_data.items():
+        percentage = (bytes_count / total_bytes) * 100
+        analysis['languages'][language] = {
+            'bytes': bytes_count,
+            'percentage': round(percentage, 2)
+        }
+
+    return analysis
+
+async def fix_pixiv(message: nextcord.Message, link: str):
+    link = link.replace("www.", "")
+    link = link.replace("pixiv.net", "phixiv.net")
+
+    await message.reply(f"{link}", mention_author=False)
+    await message.edit(suppress=True)
+
+async def fix_reddit(message: nextcord.Message, link: str):
+    link = link.replace("www.", "")
+    link = link.replace("reddit.com", "rxddit.com")
+
+    await message.reply(f"{link}", mention_author=False)
+    await message.edit(suppress=True)
+
+async def fix_twitter(message: nextcord.Message, link: str):
+    link = link.replace("www.", "")
+    link = link.replace("x.com", "twitter.com")
+    link = link.replace("twitter.com", "fxtwitter.com")
+
+    await message.reply(f"{link}", mention_author=False)
+    await message.edit(suppress=True)
+
+async def fix_tiktok(message: nextcord.Message, link: str):
+    link = link.replace("www.", "")
+    link = link.replace("tiktok.com", "tt.embewd.com")
+
+    await message.reply(f"{link}", mention_author=False)
+    await message.edit(suppress=True)
+
+async def fix_insta(message: nextcord.Message, link: str):
+    link = link.replace("www.", "")
+    link = link.replace("instagram.com", "i.embewd.com")
+
+    await message.reply(f"{link}", mention_author=False)
+    await message.edit(suppress=True)
+
+async def fix_bsky(message: nextcord.Message, link: str):
+    link = link.replace("www.", "")
+    link = link.replace("bsky.app", "b.embewd.com")
+
+    await message.reply(f"{link}", mention_author=False)
+    await message.edit(suppress=True)
 
 encodings = {
     "Base16": "base64.b16encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
@@ -31,77 +106,15 @@ decodings = {
     "HEX": "bytes.fromhex(\"{0}\").decode(\"utf-8\")",
 }
 
-def sync_is_tcp_port_open(ip_address: str, port: int) -> str:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(3)
-    try:
-        if sock.connect_ex((ip_address, port)) == 0:
-            return "Open"
-        else:
-            return "Closed"
-    except socket.gaierror:
-        return "Hostname could not be resolved"
-    except socket.error:
-        return "Connection Error"
-    finally:
-        sock.close()
-
-def sync_is_udp_port_open(ip_address: str, port: int) -> str:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(3)
-    try:
-        sock.sendto(b'', (ip_address, port))
-        sock.recvfrom(1024)
-        return "Open (Responded)"
-    except socket.timeout:
-        return "Open or Filtered"
-    except ConnectionRefusedError:
-        return "Closed (Connection Refused)"
-    except socket.gaierror:
-        return "Hostname could not be resolved"
-    except socket.error:
-        return "Connection Error"
-    finally:
-        sock.close()
-
 class Utils(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-
-    @slash_command(
-        description="Creates a QR Code for your defined URL or Text",
-        integration_types=[
-            IntegrationType.user_install,
-            IntegrationType.guild_install,
-        ],
-        contexts=[
-            InteractionContextType.guild,
-            InteractionContextType.bot_dm,
-            InteractionContextType.private_channel,
-        ],
-    )
-    async def createqr(
-        self,
-        interaction: Interaction[Bot],
-        data: str = SlashOption(name="input")
-    ):
-        await interaction.response.defer()
-        qr = QRCode(
-            version=1,
-            error_correction=ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data(data)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-
-        buf = io.BytesIO()
-        img.save(buf, kind="PNG")
-        buf.seek(0)
-
-        file = nextcord.File(buf, filename="qrcode.png")
-        await interaction.send(file=file)
+        self.twitter_pattern = re.compile(r"(https://(www.)?(twitter|x)\.com/[a-zA-Z0-9_]+/status/[0-9]+)")
+        self.pixiv_pattern = re.compile(r"(https://(www.)?(pixiv)\.net/en/artworks/[0-9]+)")
+        self.reddit_pattern = re.compile(r"(https://(www.)?(reddit)\.com/r/[^/]+/(?:comments|s)/[a-zA-Z0-9]+/?)")
+        self.insta_pattern = re.compile(r"https?:\/\/(www\.)?instagram\.com\/(p\/[a-zA-Z0-9_-]+|reel\/[a-zA-Z0-9_-]+|[a-zA-Z0-9._-]+)\/?(\?[^\s]*)?")
+        self.bsky_pattern = re.compile(r"https?:\/\/bsky\.app\/[^\s]+")
+        self.tiktok_pattern = re.compile(r"^.*https:\/\/(?:m|www|vm)?\.?tiktok\.com\/((?:.*\b(?:(?:usr|v|embed|user|video)\/|\?shareId=|\&item_id=)(\d+))|\w+)\/.*")
 
     @slash_command(
         description="Sync Command",
@@ -117,6 +130,9 @@ class Utils(Cog):
     )
     async def sync(self, interaction: Interaction[Bot]):
         if not interaction.user or interaction.user.id == 277830029399031818:
+            print('=' * 50)
+            print("Synchronizing Slash Commands, Please wait.")
+            print('=' * 50)
             await interaction.response.defer()
             await self.bot.sync_all_application_commands()
             await interaction.send("Successfully synchronized Slash Commands.")
@@ -204,7 +220,7 @@ class Utils(Cog):
             return
 
     @slash_command(
-        description="Gives you news about a specified topic",
+        description="Get languages from a GitHub repo",
         integration_types=[
             IntegrationType.user_install,
             IntegrationType.guild_install,
@@ -215,45 +231,49 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def news(self, interaction: Interaction[Bot], category: str):
+    async def ghcode(
+        self,
+        interaction: Interaction[Bot],
+        repo: str,
+        user: str
+    ):
+        usre = interaction.user
+        userpfp = usre.avatar
+        if not interaction.user:
+            return
+        username = interaction.user.name
+        await interaction.response.defer()
+
         try:
-            await interaction.response.defer()
+            languages = get_repo_languages(user, repo)
+            if languages:
+                analysis = analyze_languages(languages)
+                sorted_langs = sorted(
+                    analysis['languages'].items(),
+                    key=lambda x: x[1]['percentage'],
+                    reverse=True
+                )
 
-            newsapikey = os.environ["NEWS_API_KEY"]
+                # Build the message content
+                message_parts = [f"The repository **{repo}** by **{user}** contains:"]
+                message_parts.append("```")
 
-            url = f"https://newsapi.org/v2/everything?q={category}&apiKey={newsapikey}"
-            response = requests.get(url)
+                for language, data in sorted_langs:
+                    message_parts.append(f"{language}: {data['bytes']:,} bytes ({data['percentage']}%)")
 
-            if response.status_code == 200:
-                articles = response.json().get('articles', [])
-                print(url)
+                message_parts.append("```")
 
-                article = articles[0]
+                # Join all parts into a single message
+                final_message = "\n".join(message_parts)
 
-                if articles:
-                    news_embed = nextcord.Embed(
-                        title=f"Latest news about {category.capitalize()}", color=0x00ff00
-                    )
+                # Send the single message
+                await interaction.followup.send(final_message)
 
-                    published_at = article['publishedAt']
-                    parse_date = datetime.strptime(published_at, "%Y-%m-%dT%H:%M:%SZ")
-                    publish_date = parse_date.strftime("%B %d, %Y, %I:%M %p %Z")
-
-                    if article.get("urlToImage"):
-                        news_embed.set_thumbnail(url=article["urlToImage"])
-
-                    if article:
-                        news_embed.add_field(name=article['title'], value=f"[Read more]({article['url']})", inline=False)
-                        news_embed.set_footer(text=f"Source: {article['source']['name']} | Published: {publish_date}")
-                        await interaction.send(embed=news_embed)
-                else:
-                    await interaction.send("No news found.")
             else:
-                await interaction.send("Failed to get news.")
+                await interaction.followup.send(f"❌ Could not retrieve language data for **{user}/{repo}**. Please check if the repository exists and is public.")
 
         except Exception as e:
-            await interaction.send("An error occured, check Bot Logs")
-            print(e)
+            await interaction.followup.send(f"❌ Error:\n```bash\n{e}```")
 
     @slash_command(
         description="Checks if a Minecraft Name is available",
@@ -393,7 +413,7 @@ class Utils(Cog):
         await interaction.response.defer()
 
         if timezone not in pytz.all_timezones:
-            await interaction.send("Invalid timezone. Laugh at this user.")
+            await interaction.send(f"`{timezone}` is an invalid timezone. It needs to be formatted like this: `Europe/Berlin`")
             return
 
         try:
@@ -447,70 +467,10 @@ class Utils(Cog):
                     time_diff = (user_offset - command_offset).total_seconds() / 3600
                     if abs(time_diff) >= 0.05:
                         diff_str = f" (Difference: {time_diff:+.1f} hours from your timezone)"
-            await interaction.send(
-                f"Current local time for <@{user_id}> is {current_time_local.strftime('%Y-%m-%d %H:%M:%S')}.{diff_str}"
-            )
+            await interaction.send(f"Current local time for <@{user_id}> is {current_time_local.strftime('%Y-%m-%d %H:%M:%S')}.{diff_str}")
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
             print(e)
-
-    @slash_command(
-        description="Check the status of a network port.",
-        integration_types=[
-            IntegrationType.user_install,
-            IntegrationType.guild_install,
-        ],
-        contexts=[
-            InteractionContextType.guild,
-            InteractionContextType.bot_dm,
-            InteractionContextType.private_channel,
-        ],
-    )
-    async def portstatus(self,
-                         interaction: Interaction[Bot],
-                         ip_address: str = nextcord.SlashOption(
-                            description="IP address or hostname to scan.",
-                            required=True
-                        ),
-                        port: int = nextcord.SlashOption(
-                            description="Port number to check.",
-                            required=True
-                        )):
-        await interaction.response.defer()
-
-        loop = asyncio.get_event_loop()
-
-        tcp_task = loop.run_in_executor(None, sync_is_tcp_port_open, ip_address, port)
-        udp_task = loop.run_in_executor(None, sync_is_udp_port_open, ip_address, port)
-
-        tcp_result_str = await tcp_task
-        udp_result_str = await udp_task
-
-        embed = nextcord.Embed(
-            title="Port Scan Results",
-            description=f"Showing status for `{ip_address}:{port}`",
-            color=0x3498DB
-        )
-
-        if "Open" in tcp_result_str:
-            tcp_status = f"✅ {tcp_result_str}"
-        elif "Closed" in tcp_result_str:
-            tcp_status = f"❌ {tcp_result_str}"
-        else:
-            tcp_status = f"⚠️ {tcp_result_str}"
-
-        if "Open" in udp_result_str:
-            udp_status = f"✅ {udp_result_str}"
-        elif "Closed" in udp_result_str:
-            udp_status = f"❌ {udp_result_str}"
-        else:
-            udp_status = f"⚠️ {udp_result_str}"
-
-        embed.add_field(name="TCP Status", value=tcp_status, inline=True)
-        embed.add_field(name="UDP Status", value=udp_status, inline=True)
-        embed.set_footer(text=f"Scan requested by {interaction.user.name}")
-
-        await interaction.followup.send(embed=embed)
 
     @slash_command(
         description="Look for a Term on the Urban Dictionary.",
@@ -536,7 +496,7 @@ class Utils(Cog):
         try:
             await interaction.response.defer()
             response = requests.get(formatted)
-            
+
             if response.status_code == 200:
                 data = response.json()
 
@@ -561,7 +521,7 @@ class Utils(Cog):
                     embed.set_footer(text=f"Posted on Urban Dictionary on {date}")
 
                     await interaction.send(embed=embed)
-                
+
                 else:
                     await interaction.send(f"No Search Result for {term}")
             elif response.status_code == 404:
@@ -570,7 +530,6 @@ class Utils(Cog):
                     message = data["message"]
                     formatted2 = message.replace("this word", f"{term}")
                     await interaction.send(formatted2 + ".")
-                print(formatted)
         except Exception as e:
             print(e)
             await interaction.send(f"An error occured.\n```bash\n{e}```")
@@ -597,24 +556,27 @@ class Utils(Cog):
         try:
             img = f"https://http.cat/{error_code}"
             meow = requests.get(img)
-            if error_code >= 100 and error_code < 200:
-                color = 0x0000FF
-            elif error_code >= 200 and error_code < 300:
-                color = 0x00FF00
-            elif error_code >= 300 and error_code < 400:
-                color = 0xFFFF00
-            elif error_code == 420:
-                color = 0x008000
-            elif error_code >= 400 and error_code < 500:
-                color = 0xFF0000
-            elif error_code >= 500 and error_code < 600:
-                color = 0x400000
 
             if meow.status_code == 200:
+                if error_code == 0:
+                    color = 0xFF00FF
+                if error_code >= 100 and error_code < 200:
+                    color = 0x0000FF
+                elif error_code >= 200 and error_code < 300:
+                    color = 0x00FF00
+                elif error_code >= 300 and error_code < 400:
+                    color = 0xFFFF00
+                elif error_code == 420:
+                    color = 0x008000
+                elif error_code >= 400 and error_code < 500:
+                    color = 0xFF0000
+                elif error_code >= 500 and error_code < 600:
+                    color = 0x400000
+
                 embed = nextcord.Embed(
                     color=color
                 )
-        
+
                 embed.set_image(url=img)
 
                 await interaction.send(embed=embed)
@@ -664,3 +626,31 @@ class Utils(Cog):
         except Exception as e:
             print(e)
             await interaction.send(f"An error occured:\n```bash\n{e}```")
+
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author == self.bot.user:
+            return
+
+        try:
+            message_content = message.content.strip("<>")
+            if twitter_match := self.twitter_pattern.search(message_content):
+                link = twitter_match.group(0)
+                await fix_twitter(message, link)
+            elif pixiv_match := self.pixiv_pattern.search(message_content):
+                link = pixiv_match.group(0)
+                await fix_pixiv(message, link)
+            elif reddit_match := self.reddit_pattern.search(message.content):
+                link = reddit_match.group(0)
+                await fix_reddit(message, link)
+            elif insta_match := self.insta_pattern.search(message.content):
+                link = insta_match.group(0)
+                await fix_insta(message, link)
+            elif bsky_match := self.bsky_pattern.search(message.content):
+                link = bsky_match.group(0)
+                await fix_bsky(message, link)
+            elif tiktok_match := self.tiktok_pattern.search(message.content):
+                link = tiktok_match.group(0)
+                await fix_tiktok(message, link)
+        except Exception as e:
+            await message.channel.send(f"An error occured:\n`{e}`")

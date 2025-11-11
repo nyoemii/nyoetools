@@ -20,6 +20,7 @@ dependencies = [
     "sh>=2.2.2",
     "openai>=1.79.0",
     "nextcord",
+    "osrparse",
 ]
 
 [tool.uv.sources]

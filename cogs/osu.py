@@ -1,10 +1,15 @@
+# type: ignore
 import nextcord
+from nextcord import File, Interaction, IntegrationType, InteractionContextType, slash_command
 from nextcord.ext import commands
 import re
 import aiohttp
 import json
 import os
 from datetime import datetime
+from nextcord.ext.commands import Bot, Cog
+from osrparse import Replay
+from osrparse.utils import GameMode
 
 class OsuBeatmapView(nextcord.ui.View):
     def __init__(self, beatmap_data, beatmap_id):
@@ -28,8 +33,8 @@ class OsuBeatmapView(nextcord.ui.View):
 class OsuBeatmapConverter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.client_id = os.environ["CLIENT_ID"]
-        self.client_secret = os.environ["CLIENT_SECRET"]
+        self.client_id = os.environ["OSU_CLIENT_ID"]
+        self.client_secret = os.environ["OSU_CLIENT_SECRET"]
         self.access_token = None
         self.token_expires = None
 

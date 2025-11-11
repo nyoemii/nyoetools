@@ -175,8 +175,6 @@ def process_sequence_numbers(sequence_numbers: list[int]) -> list[int]:
         return [0]
 
     if len(sequence_numbers) == 1:  # 4 bit formatting OR color
-        if sequence_numbers[0] not in [0, 1, 4] + (list(range(30, 38)) + list(range(40, 48))):
-            print(f"invalid 1 digit sequence: {sequence_numbers}", file=sys.stderr)
         return sequence_numbers
 
     if len(sequence_numbers) == 2:  # 4 bit formatting AND color
