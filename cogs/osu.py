@@ -6,10 +6,13 @@ import re
 import aiohttp
 import json
 import os
+import dotenv
 from datetime import datetime
 from nextcord.ext.commands import Bot, Cog
 from osrparse import Replay
 from osrparse.utils import GameMode
+
+dotenv.load_dotenv()
 
 class OsuBeatmapView(nextcord.ui.View):
     def __init__(self, beatmap_data, beatmap_id):

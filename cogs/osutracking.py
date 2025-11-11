@@ -7,6 +7,8 @@ import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import logging
+import dotenv
+dotenv.load_dotenv()
 
 logger = logging.getLogger('osu_tracking')
 

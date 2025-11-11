@@ -1,10 +1,9 @@
 # type: ignore
+import io
 from nextcord import IntegrationType, Interaction, InteractionContextType, SlashOption, slash_command, Embed, InteractionMessage
 import nextcord
 from nextcord.ext import commands
 from nextcord.ext.commands import Bot, Cog
-from qrcode import QRCode
-from qrcode.constants import ERROR_CORRECT_L
 import requests
 from requests import HTTPError
 import os

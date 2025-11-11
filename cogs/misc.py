@@ -79,33 +79,13 @@ class Misc(Cog):
     async def ping(self, interaction: Interaction[Bot]):
         embed: Embed = Embed(
             color=Colour.green(),
-            title="Bone fetched! :3",
-            description=f"-# **Latency**: {self.bot.latency * 1000:.1f} ms • **Memory usage**: {size(self.proc.memory_info().rss)}"
-        )
-        await interaction.response.send_message(embed=embed)
-
-    @slash_command(
-        description="Ping!",
-        integration_types=[
-            IntegrationType.user_install,
-            IntegrationType.guild_install,
-        ],
-        contexts=[
-            InteractionContextType.guild,
-            InteractionContextType.bot_dm,
-            InteractionContextType.private_channel,
-        ],
-    )
-    async def ping(self, interaction: Interaction[Bot]):
-        embed: Embed = Embed(
-            color=Colour.green(),
             title="Pong!",
             description=f"-# **Latency**: {self.bot.latency * 1000:.1f} ms • **Memory usage**: {size(self.proc.memory_info().rss)}"
         )
         await interaction.response.send_message(embed=embed)
 
     @slash_command(
-        description="Current system Info",
+        description="Current System Info",
         integration_types=[
             IntegrationType.user_install,
             IntegrationType.guild_install,
@@ -116,8 +96,8 @@ class Misc(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def info(self, iact: Interaction[Bot], ephemeral: bool = False):
-        await iact.response.defer(ephemeral=ephemeral)
+    async def info(self, interaction: Interaction[Bot], ephemeral: bool = False):
+        await interaction.response.defer(ephemeral=ephemeral)
         embed: Embed = Embed(title="System Info", color=Colour.blue(), timestamp=datetime.datetime.now())
         embed.add_field(name="CPU Usage", value=f"{psutil.cpu_percent()}%")
         vmem = psutil.virtual_memory()
@@ -129,7 +109,7 @@ class Misc(Cog):
         embed.add_field(name="Uptime", value=f"<t:{psutil.boot_time():.0f}:R>")
         embed.add_field(name="Python Version", value=f"`{sys.version}`")
         embed.add_field(name="Nextcord Version", value="[3.1.0+g0429ea4f](https://github.com/nextcord/nextcord?rev=0429ea4fc2cc7d372425359347c5f8550c41876c#0429ea4fc2cc7d372425359347c5f8550c41876c)")
-        await iact.send(embed=embed, ephemeral=ephemeral)
+        await interaction.send(embed=embed, ephemeral=ephemeral)
 
     @slash_command(
         name="credits",
