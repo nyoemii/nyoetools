@@ -13,8 +13,6 @@ import nextcord
 from nextcord.ext.commands import Bot, Cog
 import psutil
 
-from . import discord_ansi_adapter
-
 class HumanBytes:
     METRIC_LABELS: List[str] = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"]
     BINARY_LABELS: List[str] = ["B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"]
