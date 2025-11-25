@@ -14,6 +14,7 @@ from nextcord import (
 import nextcord
 from nextcord.ext.commands import Bot, Cog
 import psutil
+import hashlib
 
 
 class HumanBytes:
@@ -175,5 +176,42 @@ class Misc(Cog):
             value="[Mineek](https://github.com/mineek), [omardotdev](https://omardotdev.github.io), impliedgg, [ie11/positron](https://cdstx4.xyz), mugman",
             inline=True,
         )
+
+        await interaction.send(embed=embed)
+
+    @slash_command(
+        name="hash",
+        description="Hashes a string with all available algorithms",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel,
+        ],
+    )
+    async def hash_cmd(self, interaction: Interaction[Bot], text: str):
+        await interaction.response.defer()
+        embed = nextcord.Embed(title="Hashes", color=nextcord.Color.blue())
+
+        algos = sorted(list(hashlib.algorithms_available))
+
+        for algo in algos:
+            try:
+                h = hashlib.new(algo)  # this obviously creates a new algorithm
+                h.update(text.encode())
+                try:
+                    res = h.hexdigest()
+                except TypeError:  # imagine using chinese chars
+                    res = h.hexdigest(16)
+
+                if len(res) > 1024:  # imagine discord being bad
+                    res = res[:1021] + "..."  # <==== me reading noemi's code
+
+                embed.add_field(name=algo, value=f"`{res}`", inline=True)
+            except Exception:  # i dont know what can go wrong
+                continue
 
         await interaction.send(embed=embed)
