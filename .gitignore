@@ -3,3 +3,4 @@ users.json
 config.jsonc
 btmc.png
 .env
+/cogs/__pycache__

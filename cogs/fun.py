@@ -1,13 +1,15 @@
 # type: ignore
-from nextcord import IntegrationType, Interaction, InteractionContextType, \
-    SlashOption, slash_command, Embed, User, Member
+from nextcord import (
+    IntegrationType,
+    Interaction,
+    InteractionContextType,
+    SlashOption,
+    slash_command,
+    Embed,
+)
 from nextcord.ext.commands import Bot, Cog
 import random
-import os
 import requests
-import time
-from openai import OpenAI
-from typing import Optional, Union
 
 currencies = {
     "Australian Dollar": "AUD",
@@ -34,8 +36,9 @@ currencies = {
     "Thai Baht": "THB",
     "Turkish Lira": "TRY",
     "United States Dollar": "USD",
-    "South African Rand": "ZAR"
+    "South African Rand": "ZAR",
 }
+
 
 class Fun(Cog):
     def __init__(self, bot: Bot):
@@ -50,38 +53,86 @@ class Fun(Cog):
         contexts=[
             InteractionContextType.guild,
             InteractionContextType.bot_dm,
-            InteractionContextType.private_channel
+            InteractionContextType.private_channel,
         ],
     )
-    async def currency(self, interaction: Interaction[Bot], amount: int, currencyfrom: str = SlashOption(
-        choices={"Australian Dollar": "AUD", "Bulgarian Lev": "BGN", "Brazilian Real": "BRL", "Canadian Dollar": "CAD", "Swiss Franc": "CHF", "Chinese Renminbi Yuan": "CNY", "Czech Koruna": "CZK", "Danish Krone": "DKK", "Euro": "EUR", "British Pound": "GBP", "Hong Kong Dollar": "HKD", "Hungarian Forint": "HUF", "Indonesian Rupiah": "IDR", "Japanese Yen": "JPY", "South Korean Won": "KRW", "Norwegian Krone": "NOK", "Polish Zloty": "PLN", "Swedish Krona": "SEK", "Turkish Lira": "TRY", "United States Dollar": "USD"}), currencyto: str = SlashOption(
-        choices={"Australian Dollar": "AUD", "Bulgarian Lev": "BGN", "Brazilian Real": "BRL", "Canadian Dollar": "CAD", "Swiss Franc": "CHF", "Chinese Renminbi Yuan": "CNY", "Czech Koruna": "CZK", "Danish Krone": "DKK", "Euro": "EUR", "British Pound": "GBP", "Hong Kong Dollar": "HKD", "Hungarian Forint": "HUF", "Indonesian Rupiah": "IDR", "Japanese Yen": "JPY", "South Korean Won": "KRW", "Norwegian Krone": "NOK", "Polish Zloty": "PLN", "Swedish Krona": "SEK", "Turkish Lira": "TRY", "United States Dollar": "USD"})):
-            url = f"https://api.frankfurter.dev/v1/latest?base={currencyfrom}&symbols={currencyto}"
+    async def currency(
+        self,
+        interaction: Interaction[Bot],
+        amount: int,
+        currencyfrom: str = SlashOption(
+            choices={
+                "Australian Dollar": "AUD",
+                "Bulgarian Lev": "BGN",
+                "Brazilian Real": "BRL",
+                "Canadian Dollar": "CAD",
+                "Swiss Franc": "CHF",
+                "Chinese Renminbi Yuan": "CNY",
+                "Czech Koruna": "CZK",
+                "Danish Krone": "DKK",
+                "Euro": "EUR",
+                "British Pound": "GBP",
+                "Hong Kong Dollar": "HKD",
+                "Hungarian Forint": "HUF",
+                "Indonesian Rupiah": "IDR",
+                "Japanese Yen": "JPY",
+                "South Korean Won": "KRW",
+                "Norwegian Krone": "NOK",
+                "Polish Zloty": "PLN",
+                "Swedish Krona": "SEK",
+                "Turkish Lira": "TRY",
+                "United States Dollar": "USD",
+            }
+        ),
+        currencyto: str = SlashOption(
+            choices={
+                "Australian Dollar": "AUD",
+                "Bulgarian Lev": "BGN",
+                "Brazilian Real": "BRL",
+                "Canadian Dollar": "CAD",
+                "Swiss Franc": "CHF",
+                "Chinese Renminbi Yuan": "CNY",
+                "Czech Koruna": "CZK",
+                "Danish Krone": "DKK",
+                "Euro": "EUR",
+                "British Pound": "GBP",
+                "Hong Kong Dollar": "HKD",
+                "Hungarian Forint": "HUF",
+                "Indonesian Rupiah": "IDR",
+                "Japanese Yen": "JPY",
+                "South Korean Won": "KRW",
+                "Norwegian Krone": "NOK",
+                "Polish Zloty": "PLN",
+                "Swedish Krona": "SEK",
+                "Turkish Lira": "TRY",
+                "United States Dollar": "USD",
+            }
+        ),
+    ):
+        url = f"https://api.frankfurter.dev/v1/latest?base={currencyfrom}&symbols={currencyto}"
 
-            try:
-                await interaction.response.defer()
-                response = requests.get(url)
+        try:
+            await interaction.response.defer()
+            response = requests.get(url)
 
-                if response.status_code == 200:
-                    data = response.json()
+            if response.status_code == 200:
+                data = response.json()
 
-                    rate = data['rates'][f'{currencyto}']
-                    raw_result = amount * rate
-                    result = str(round(raw_result, 2))
+                rate = data["rates"][f"{currencyto}"]
+                raw_result = amount * rate
+                result = str(round(raw_result, 2))
 
-                    embed = Embed(
-                        title=f"Conversion from {currencyfrom} to {currencyto}",
-                        description=f"```{amount} * {rate} = {result} {currencyto}```",
-                        color=0x00ff00
-                    ).set_footer(
-                        text=f"Executed by {interaction.user.name}"
-                    )
+                embed = Embed(
+                    title=f"Conversion from {currencyfrom} to {currencyto}",
+                    description=f"```{amount} * {rate} = {result} {currencyto}```",
+                    color=0x00FF00,
+                ).set_footer(text=f"Executed by {interaction.user.name}")
 
-                    await interaction.send(embed=embed)
-                    return
-            except Exception as e:
-                await interaction.send("Conversion has failed. Check logs.")
-                print(e)
+                await interaction.send(embed=embed)
+                return
+        except Exception as e:
+            await interaction.send("Conversion has failed. Check logs.")
+            print(e)
 
     @slash_command(
         description="Roll a Dice",
@@ -92,7 +143,7 @@ class Fun(Cog):
         contexts=[
             InteractionContextType.guild,
             InteractionContextType.bot_dm,
-            InteractionContextType.private_channel
+            InteractionContextType.private_channel,
         ],
     )
     async def roll(self, interaction: Interaction[Bot], sides: int, amount: int):
@@ -106,7 +157,7 @@ class Fun(Cog):
                 embed = Embed(
                     title=f"{sides}-sided dice roll for {amount} times",
                     description=f"You rolled: {', '.join(rolls)}",
-                    color=0x00ff00
+                    color=0x00FF00,
                 )
 
                 await interaction.send(embed=embed)
