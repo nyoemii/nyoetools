@@ -1,18 +1,23 @@
 # type: ignore
-import io
-from nextcord import IntegrationType, Interaction, InteractionContextType, SlashOption, slash_command, Embed, InteractionMessage
+from nextcord import (
+    IntegrationType,
+    Interaction,
+    InteractionContextType,
+    SlashOption,
+    slash_command,
+    Embed,
+)
 import nextcord
 from nextcord.ext import commands
 from nextcord.ext.commands import Bot, Cog
 import requests
 from requests import HTTPError
-import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional, Union
-import base64
 import json
 import pytz
+
 
 def get_repo_languages(owner, repo):
     url = f"https://api.github.com/repos/{owner}/{repo}/languages"
@@ -27,25 +32,24 @@ def get_repo_languages(owner, repo):
         print(f"Error fetching data: {e}")
         return None
 
+
 def analyze_languages(languages_data):
     if not languages_data:
         return None
 
     total_bytes = sum(languages_data.values())
 
-    analysis = {
-        'total_bytes': total_bytes,
-        'languages': {}
-    }
+    analysis = {"total_bytes": total_bytes, "languages": {}}
 
     for language, bytes_count in languages_data.items():
         percentage = (bytes_count / total_bytes) * 100
-        analysis['languages'][language] = {
-            'bytes': bytes_count,
-            'percentage': round(percentage, 2)
+        analysis["languages"][language] = {
+            "bytes": bytes_count,
+            "percentage": round(percentage, 2),
         }
 
     return analysis
+
 
 async def fix_pixiv(message: nextcord.Message, link: str):
     link = link.replace("www.", "")
@@ -54,12 +58,14 @@ async def fix_pixiv(message: nextcord.Message, link: str):
     await message.reply(f"{link}", mention_author=False)
     await message.edit(suppress=True)
 
+
 async def fix_reddit(message: nextcord.Message, link: str):
     link = link.replace("www.", "")
     link = link.replace("reddit.com", "rxddit.com")
 
     await message.reply(f"{link}", mention_author=False)
     await message.edit(suppress=True)
+
 
 async def fix_twitter(message: nextcord.Message, link: str):
     link = link.replace("www.", "")
@@ -69,12 +75,14 @@ async def fix_twitter(message: nextcord.Message, link: str):
     await message.reply(f"{link}", mention_author=False)
     await message.edit(suppress=True)
 
+
 async def fix_tiktok(message: nextcord.Message, link: str):
     link = link.replace("www.", "")
     link = link.replace("tiktok.com", "tt.embewd.com")
 
     await message.reply(f"{link}", mention_author=False)
     await message.edit(suppress=True)
+
 
 async def fix_insta(message: nextcord.Message, link: str):
     link = link.replace("www.", "")
@@ -83,6 +91,7 @@ async def fix_insta(message: nextcord.Message, link: str):
     await message.reply(f"{link}", mention_author=False)
     await message.edit(suppress=True)
 
+
 async def fix_bsky(message: nextcord.Message, link: str):
     link = link.replace("www.", "")
     link = link.replace("bsky.app", "b.embewd.com")
@@ -90,30 +99,42 @@ async def fix_bsky(message: nextcord.Message, link: str):
     await message.reply(f"{link}", mention_author=False)
     await message.edit(suppress=True)
 
+
 encodings = {
-    "Base16": "base64.b16encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
-    "Base32": "base64.b32encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
-    "Base64": "base64.b64encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
-    "Base85": "base64.b85encode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
-    "HEX": "bytes.hex(\"{0}\".encode(\"utf-8\"))",
+    "Base16": 'base64.b16encode("{0}".encode("utf-8")).decode("utf-8")',
+    "Base32": 'base64.b32encode("{0}".encode("utf-8")).decode("utf-8")',
+    "Base64": 'base64.b64encode("{0}".encode("utf-8")).decode("utf-8")',
+    "Base85": 'base64.b85encode("{0}".encode("utf-8")).decode("utf-8")',
+    "HEX": 'bytes.hex("{0}".encode("utf-8"))',
 }
 decodings = {
-    "Base16": "base64.b16decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
-    "Base32": "base64.b32decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
-    "Base64": "base64.b64decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
-    "Base85": "base64.b85decode(\"{0}\".encode(\"utf-8\")).decode(\"utf-8\")",
-    "HEX": "bytes.fromhex(\"{0}\").decode(\"utf-8\")",
+    "Base16": 'base64.b16decode("{0}".encode("utf-8")).decode("utf-8")',
+    "Base32": 'base64.b32decode("{0}".encode("utf-8")).decode("utf-8")',
+    "Base64": 'base64.b64decode("{0}".encode("utf-8")).decode("utf-8")',
+    "Base85": 'base64.b85decode("{0}".encode("utf-8")).decode("utf-8")',
+    "HEX": 'bytes.fromhex("{0}").decode("utf-8")',
 }
+
 
 class Utils(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.twitter_pattern = re.compile(r"(https://(www.)?(twitter|x)\.com/[a-zA-Z0-9_]+/status/[0-9]+)")
-        self.pixiv_pattern = re.compile(r"(https://(www.)?(pixiv)\.net/en/artworks/[0-9]+)")
-        self.reddit_pattern = re.compile(r"(https://(www.)?(reddit)\.com/r/[^/]+/(?:comments|s)/[a-zA-Z0-9]+/?)")
-        self.insta_pattern = re.compile(r"https?:\/\/(www\.)?instagram\.com\/(p\/[a-zA-Z0-9_-]+|reel\/[a-zA-Z0-9_-]+|[a-zA-Z0-9._-]+)\/?(\?[^\s]*)?")
+        self.twitter_pattern = re.compile(
+            r"(https://(www.)?(twitter|x)\.com/[a-zA-Z0-9_]+/status/[0-9]+)"
+        )
+        self.pixiv_pattern = re.compile(
+            r"(https://(www.)?(pixiv)\.net/en/artworks/[0-9]+)"
+        )
+        self.reddit_pattern = re.compile(
+            r"(https://(www.)?(reddit)\.com/r/[^/]+/(?:comments|s)/[a-zA-Z0-9]+/?)"
+        )
+        self.insta_pattern = re.compile(
+            r"https?:\/\/(www\.)?instagram\.com\/(p\/[a-zA-Z0-9_-]+|reel\/[a-zA-Z0-9_-]+|[a-zA-Z0-9._-]+)\/?(\?[^\s]*)?"
+        )
         self.bsky_pattern = re.compile(r"https?:\/\/bsky\.app\/[^\s]+")
-        self.tiktok_pattern = re.compile(r"^.*https:\/\/(?:m|www|vm)?\.?tiktok\.com\/((?:.*\b(?:(?:usr|v|embed|user|video)\/|\?shareId=|\&item_id=)(\d+))|\w+)\/.*")
+        self.tiktok_pattern = re.compile(
+            r"^.*https:\/\/(?:m|www|vm)?\.?tiktok\.com\/((?:.*\b(?:(?:usr|v|embed|user|video)\/|\?shareId=|\&item_id=)(\d+))|\w+)\/.*"
+        )
 
     @slash_command(
         description="Sync Command",
@@ -129,9 +150,9 @@ class Utils(Cog):
     )
     async def sync(self, interaction: Interaction[Bot]):
         if not interaction.user or interaction.user.id == 277830029399031818:
-            print('=' * 50)
+            print("=" * 50)
             print("Synchronizing Slash Commands, Please wait.")
-            print('=' * 50)
+            print("=" * 50)
             await interaction.response.defer()
             await self.bot.sync_all_application_commands()
             await interaction.send("Successfully synchronized Slash Commands.")
@@ -151,11 +172,7 @@ class Utils(Cog):
         ],
     )
     async def github(
-        self,
-        interaction: Interaction[Bot],
-        repo: str,
-        user: str,
-        commitname: str
+        self, interaction: Interaction[Bot], repo: str, user: str, commitname: str
     ):
         usre = interaction.user
         userpfp = usre.avatar
@@ -177,8 +194,8 @@ class Utils(Cog):
             if response.status_code == 200:
                 data = response.json()
 
-                commit = data['commit']
-                author = data['author']
+                commit = data["commit"]
+                author = data["author"]
 
                 git_commit_hash = data.get("sha", {})
                 git_message = commit.get("message", "No message attached.")
@@ -189,30 +206,29 @@ class Utils(Cog):
                 await interaction.send("GitHub Repo not found.")
                 return
 
-            embed = nextcord.Embed(
-                title=f"Information about {repo} by {user}",
-                color=nextcord.Color.green()
-            ).add_field(
-                name="Commit Hash",
-                value=f"[{git_commit_hash}](https://github.com/{user}/{repo}/commits/{git_commit_hash})",
-                inline=False
-            ).add_field(
-                name="Message: ",
-                value=f"{git_message}",
-                inline=False
-            ).set_author(
-                name=f"{user}",
-                url=f"{git_profile}",
-                icon_url=f"{git_avatar}"
-            ).set_footer(
-                icon_url=userpfp.url,
-                text=f"Command ran by {username}"
+            embed = (
+                nextcord.Embed(
+                    title=f"Information about {repo} by {user}",
+                    color=nextcord.Color.green(),
+                )
+                .add_field(
+                    name="Commit Hash",
+                    value=f"[{git_commit_hash}](https://github.com/{user}/{repo}/commits/{git_commit_hash})",
+                    inline=False,
+                )
+                .add_field(name="Message: ", value=f"{git_message}", inline=False)
+                .set_author(
+                    name=f"{user}", url=f"{git_profile}", icon_url=f"{git_avatar}"
+                )
+                .set_footer(icon_url=userpfp.url, text=f"Command ran by {username}")
             )
 
             await interaction.send(embed=embed)
             return
         except HTTPError:
-            await interaction.send(f"Error accessing GitHub: {response.status_code if response is not None else 'Unknown Error'}")
+            await interaction.send(
+                f"Error accessing GitHub: {response.status_code if response is not None else 'Unknown Error'}"
+            )
             return
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
@@ -230,17 +246,9 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def ghcode(
-        self,
-        interaction: Interaction[Bot],
-        repo: str,
-        user: str
-    ):
-        usre = interaction.user
-        userpfp = usre.avatar
+    async def ghcode(self, interaction: Interaction[Bot], repo: str, user: str):
         if not interaction.user:
             return
-        username = interaction.user.name
         await interaction.response.defer()
 
         try:
@@ -248,9 +256,9 @@ class Utils(Cog):
             if languages:
                 analysis = analyze_languages(languages)
                 sorted_langs = sorted(
-                    analysis['languages'].items(),
-                    key=lambda x: x[1]['percentage'],
-                    reverse=True
+                    analysis["languages"].items(),
+                    key=lambda x: x[1]["percentage"],
+                    reverse=True,
                 )
 
                 # Build the message content
@@ -258,7 +266,9 @@ class Utils(Cog):
                 message_parts.append("```")
 
                 for language, data in sorted_langs:
-                    message_parts.append(f"{language}: {data['bytes']:,} bytes ({data['percentage']}%)")
+                    message_parts.append(
+                        f"{language}: {data['bytes']:,} bytes ({data['percentage']}%)"
+                    )
 
                 message_parts.append("```")
 
@@ -269,7 +279,9 @@ class Utils(Cog):
                 await interaction.followup.send(final_message)
 
             else:
-                await interaction.followup.send(f"❌ Could not retrieve language data for **{user}/{repo}**. Please check if the repository exists and is public.")
+                await interaction.followup.send(
+                    f"❌ Could not retrieve language data for **{user}/{repo}**. Please check if the repository exists and is public."
+                )
 
         except Exception as e:
             await interaction.followup.send(f"❌ Error:\n```bash\n{e}```")
@@ -296,18 +308,27 @@ class Utils(Cog):
             if response.status_code == 200:
                 data = response.json()
 
-                if 'name' in data:
-                    await interaction.send(f"The username `{data['name']}` is already taken.")
+                if "name" in data:
+                    await interaction.send(
+                        f"The username `{data['name']}` is already taken."
+                    )
                 else:
                     await interaction.send("Unexpected response from Mojang's API.")
             elif len(username) < 3 or len(username) > 16:
-                await interaction.send(f"The username `{username}` is not available because it is too {"long" if len(username) > 16 else "short"}.")
+                await interaction.send(
+                    f"The username `{username}` is not available because it is too {'long' if len(username) > 16 else 'short'}."
+                )
             else:
                 data = response.json()
-                if 'errorMessage' in data and "Couldn't find any profile" in data['errorMessage']:
+                if (
+                    "errorMessage" in data
+                    and "Couldn't find any profile" in data["errorMessage"]
+                ):
                     await interaction.send(f"The username `{username}` is available!")
                 else:
-                    await interaction.send(f"Error checking username: {data.get('errorMessage', 'Unknown error')}")
+                    await interaction.send(
+                        f"Error checking username: {data.get('errorMessage', 'Unknown error')}"
+                    )
         except Exception as e:
             await interaction.send("Error: Logs")
             print(e)
@@ -324,7 +345,11 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def avatar(self, interaction: Interaction[Bot], user: Optional[Union[nextcord.User, nextcord.Member]] = None):
+    async def avatar(
+        self,
+        interaction: Interaction[Bot],
+        user: Optional[Union[nextcord.User, nextcord.Member]] = None,
+    ):
         await interaction.response.defer()
 
         try:
@@ -339,9 +364,7 @@ class Utils(Cog):
                 await interaction.send("user.avatar was None!")
 
             embed = Embed(
-                title=f"{user.name}'s Avatar",
-                color=0x0000ff,
-                timestamp=datetime.now()
+                title=f"{user.name}'s Avatar", color=0x0000FF, timestamp=datetime.now()
             )
 
             embed.set_image(userpfp.url)
@@ -363,7 +386,12 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def encode(self, interaction: Interaction[Bot], message: str, method: str = SlashOption(choices=encodings.keys())):
+    async def encode(
+        self,
+        interaction: Interaction[Bot],
+        message: str,
+        method: str = SlashOption(choices=encodings.keys()),
+    ):
         await interaction.response.defer()
 
         try:
@@ -385,7 +413,12 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def decode(self, interaction: Interaction[Bot], message: str, method: str = SlashOption(choices=decodings.keys())):
+    async def decode(
+        self,
+        interaction: Interaction[Bot],
+        message: str,
+        method: str = SlashOption(choices=decodings.keys()),
+    ):
         await interaction.response.defer()
 
         try:
@@ -412,7 +445,9 @@ class Utils(Cog):
         await interaction.response.defer()
 
         if timezone not in pytz.all_timezones:
-            await interaction.send(f"`{timezone}` is an invalid timezone. It needs to be formatted like this: `Europe/Berlin`")
+            await interaction.send(
+                f"`{timezone}` is an invalid timezone. It needs to be formatted like this: `Europe/Berlin`"
+            )
             return
 
         try:
@@ -440,7 +475,11 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def time(self, interaction: Interaction[Bot], user: Optional[Union[nextcord.User, nextcord.Member]] = None):
+    async def time(
+        self,
+        interaction: Interaction[Bot],
+        user: Optional[Union[nextcord.User, nextcord.Member]] = None,
+    ):
         await interaction.response.defer()
 
         try:
@@ -451,7 +490,9 @@ class Utils(Cog):
             with open("users.json", "r") as f:
                 users = json.load(f)
             if str(user_id) not in users:
-                await interaction.send(f"Please set your timezone using `/settimezone <timezone>`{f', {user.mention}' if user else ''}.")
+                await interaction.send(
+                    f"Please set your timezone using `/settimezone <timezone>`{f', {user.mention}' if user else ''}."
+                )
                 return
             timezone = users[str(user_id)]["timezone"]
             current_time = datetime.now(pytz.timezone(timezone))
@@ -465,8 +506,12 @@ class Utils(Cog):
                 if user_offset is not None and command_offset is not None:
                     time_diff = (user_offset - command_offset).total_seconds() / 3600
                     if abs(time_diff) >= 0.05:
-                        diff_str = f" (Difference: {time_diff:+.1f} hours from your timezone)"
-            await interaction.send(f"Current local time for <@{user_id}> is {current_time_local.strftime('%Y-%m-%d %H:%M:%S')}.{diff_str}")
+                        diff_str = (
+                            f" (Difference: {time_diff:+.1f} hours from your timezone)"
+                        )
+            await interaction.send(
+                f"Current local time for <@{user_id}> is {current_time_local.strftime('%Y-%m-%d %H:%M:%S')}.{diff_str}"
+            )
         except Exception as e:
             await interaction.send(f"An error occured.\n```bash\n{e}```")
             print(e)
@@ -483,12 +528,11 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def urban(self,
-                         interaction: Interaction[Bot],
-                         term: str = nextcord.SlashOption(
-                            description="Term to look for",
-                            required=True
-                        )):
+    async def urban(
+        self,
+        interaction: Interaction[Bot],
+        term: str = nextcord.SlashOption(description="Term to look for", required=True),
+    ):
         url = f"https://unofficialurbandictionaryapi.com/api/search?term={term}&strict=true&"
         formatted = url.replace(" ", "_")
 
@@ -499,10 +543,9 @@ class Utils(Cog):
             if response.status_code == 200:
                 data = response.json()
 
-                if 'found' in data:
+                if "found" in data:
                     result = data["data"][0]
 
-                    word = result["word"]
                     meaning = result["meaning"]
                     example = result["example"]
                     contributor = result["contributor"]
@@ -511,12 +554,14 @@ class Utils(Cog):
                     embed = nextcord.Embed(
                         title="Urban Dictionary Lookup",
                         description=f"Showing the top result for {term}",
-                        color=0x3498DB
+                        color=0x3498DB,
                     )
 
                     embed.set_author(name=contributor)
                     embed.add_field(name="Meaning", value=meaning[:300], inline=False)
-                    embed.add_field(name="Example", value=f"`{example[:500]}`", inline=False)
+                    embed.add_field(
+                        name="Example", value=f"`{example[:500]}`", inline=False
+                    )
                     embed.set_footer(text=f"Posted on Urban Dictionary on {date}")
 
                     await interaction.send(embed=embed)
@@ -525,7 +570,7 @@ class Utils(Cog):
                     await interaction.send(f"No Search Result for {term}")
             elif response.status_code == 404:
                 data = response.json()
-                if 'message' in data:
+                if "message" in data:
                     message = data["message"]
                     formatted2 = message.replace("this word", f"{term}")
                     await interaction.send(formatted2 + ".")
@@ -545,12 +590,11 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def httpcat(self,
-                         interaction: Interaction[Bot],
-                         error_code: int = nextcord.SlashOption(
-                            description="Error Code",
-                            required=True
-                        )):
+    async def httpcat(
+        self,
+        interaction: Interaction[Bot],
+        error_code: int = nextcord.SlashOption(description="Error Code", required=True),
+    ):
         await interaction.response.defer()
         try:
             img = f"https://http.cat/{error_code}"
@@ -572,9 +616,7 @@ class Utils(Cog):
                 elif error_code >= 500 and error_code < 600:
                     color = 0x400000
 
-                embed = nextcord.Embed(
-                    color=color
-                )
+                embed = nextcord.Embed(color=color)
 
                 embed.set_image(url=img)
 
@@ -597,16 +639,17 @@ class Utils(Cog):
             InteractionContextType.private_channel,
         ],
     )
-    async def mcskin(self,
-                         interaction: Interaction[Bot],
-                         minecraft_name: str = nextcord.SlashOption(
-                            description="Minecraft Name",
-                            required=True
-                        )):
+    async def mcskin(
+        self,
+        interaction: Interaction[Bot],
+        minecraft_name: str = nextcord.SlashOption(
+            description="Minecraft Name", required=True
+        ),
+    ):
         await interaction.response.defer()
 
         try:
-            if re.match(r'[a-zA-Z0-9_]', minecraft_name):
+            if re.match(r"[a-zA-Z0-9_]", minecraft_name):
                 url = f"https://vzge.me/full/384/{minecraft_name}"
             else:
                 await interaction.send("Invalid Minecraft Username.")
@@ -614,7 +657,7 @@ class Utils(Cog):
             embed = nextcord.Embed(
                 title=f"{minecraft_name}'s Skin",
                 description=f"[Download Skin](https://mineskin.eu/download/{minecraft_name})",
-                color=0x008000
+                color=0x008000,
             )
 
             embed.set_image(url)
