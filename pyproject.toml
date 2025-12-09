@@ -21,6 +21,10 @@ dependencies = [
     "openai>=1.79.0",
     "nextcord",
     "osrparse",
+    "selenium",
+    "wavelink>=3.0.0",
+    "yt_dlp",
+    "deepl",
 ]
 
 [tool.uv.sources]

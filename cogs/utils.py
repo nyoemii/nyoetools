@@ -13,6 +13,12 @@ from typing import Optional, Union
 import base64
 import json
 import pytz
+import deepl
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
 
 def get_repo_languages(owner, repo):
     url = f"https://api.github.com/repos/{owner}/{repo}/languages"
@@ -625,6 +631,124 @@ class Utils(Cog):
         except Exception as e:
             print(e)
             await interaction.send(f"An error occured:\n```bash\n{e}```")
+
+    @slash_command(
+        description="Take a screenshot of a website",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel,
+        ],
+    )
+    async def screenshot(self,
+                         interaction: Interaction[Bot],
+                         url: str = nextcord.SlashOption(
+                            description="Website URL",
+                            required=True
+                            )):
+        await interaction.response.defer()
+
+        driver = None
+        try:
+            if not url.startswith(("http://", "https://")):
+                url = "https://" + url
+            
+            chrome_options = Options()
+            chrome_options.add_argument("--headless")
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--window-size=1920,1080")
+            chrome_options.add_argument("--disable-software-rasterizer")
+            chrome_options.add_argument("--disable-extensions")
+
+            driver = webdriver.Chrome(options=chrome_options)
+
+            driver.get(url)
+
+            WebDriverWait(driver, 10).until(
+                lambda d: d.execute_script('return document.readyState') == 'complete'
+            )
+
+            ss_bytes = driver.get_screenshot_as_png()
+
+            ss_file = nextcord.File(
+                io.BytesIO(ss_bytes),
+                filename="screenshot.png"
+            )
+
+            embed = nextcord.Embed(
+                color=0x5865F2,
+                timestamp=datetime.now()
+            )
+
+            embed.set_image(url="attachment://screenshot.png")
+            embed.set_footer(
+                text=f"Requested by {interaction.user.name}",
+                icon_url=interaction.user.avatar.url if interaction.user.avatar else None
+            )
+
+            await interaction.send(embed=embed, file=ss_file)
+
+        except Exception as e:
+            print(e)
+            await interaction.send(f"An error occured while taking a screenshot:\n```bash\n{e}```")
+        finally:
+            if driver:
+                driver.quit()
+
+    @slash_command(
+        description="Translates your text using DeepL",
+        integration_types=[
+            IntegrationType.user_install,
+            IntegrationType.guild_install,
+        ],
+        contexts=[
+            InteractionContextType.guild,
+            InteractionContextType.bot_dm,
+            InteractionContextType.private_channel,
+        ],
+    async def translate(self,
+                        interaction: Interaction[Bot],
+                        text: str = nextcord.SlashOption(
+                            description="Text to translate",
+                            required=True
+                        ),
+                        target_lang: str = nextcord.SlashOption(
+                            description="Target language (e.g., EN, DE, FR)",
+                            required=True
+                        )):
+        await interaction.response.defer()
+
+        try:
+            if target_lang == "EN":
+                target_lang = "EN-US"
+
+            deepl_client = deepl.DeepLClient(os.getenv("DEEPL_API_KEY"))
+            result = deepl_client.translate_text(text, target_lang=target_lang.upper())
+
+            embed = nextcord.Embed(
+                title="Translation",
+                color=0x0B82C4,
+                timestamp=datetime.now()
+            )
+
+            embed.add_field(name="Original Text", value=f"```\n{text}\n```", inline=False)
+            embed.add_field(name=f"Translated ({target_lang.upper()})", value=f"```\n{result}\n```", inline=False)
+            embed.set_footer(
+                text=f"Translated using DeepL • Requested by {interaction.user.name}",
+                icon_url=interaction.user.avatar.url if interaction.user.avatar else None
+            )
+
+            await interaction.send(embed=embed)
+
+        except Exception as e:
+            print(e)
+            await interaction.send(f"An error occured while translating:\n```bash\n{e}```")
 
     @commands.Cog.listener()
     async def on_message(self, message):
