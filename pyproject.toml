@@ -1,31 +1,22 @@
 [project]
-name = "nyoetools"
-version = "0.1.0"
+name = "nyoetools.py"
+version = "0.0.1"
 description = "A discord bot"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "accesscontrol>=7.2",
-    "aiohttp>=3.11.18",
-    "asyncio>=3.4.3",
-    "datetime>=5.5",
-    "dotenv>=0.9.9",
-    "logging>=0.4.9.6",
-    "pillow>=11.2.1",
-    "psutil>=7.0.0",
-    "pytz>=2025.2",
-    "qrcode>=8.2",
-    "requests>=2.32.3",
-    "restrictedpython>=8.0",
-    "sh>=2.2.2",
-    "openai>=1.79.0",
-    "nextcord",
-    "osrparse",
-    "selenium",
-    "wavelink>=3.0.0",
-    "yt_dlp",
-    "deepl",
+    "discord.py>=2.3.0",
+    "python-dotenv>=1.0.0",
+    "psutil>=5.9.0",
+    "requests>=2.31.0",
+    "aiohttp>=3.9.0",
+    "openai>=1.0.0",
+    "deepl>=1.15.0",
+    "pytz>=2024.1",
+    "pytesseract>=0.3.10",
+    "pillow>=10.0.0",
+    "selenium>=4.15.0",
+    "osrparse>=6.0.0",
+    "dnspython",
+    "python-whois",
 ]
-
-[tool.uv.sources]
-nextcord = { git = "https://github.com/nextcord/nextcord", rev = "0429ea4fc2cc7d372425359347c5f8550c41876c" }

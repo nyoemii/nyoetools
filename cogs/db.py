@@ -1,6 +1,6 @@
-import nextcord
-from nextcord.ext import commands
-from nextcord import Interaction, SlashOption, IntegrationType, InteractionContextType
+import discord
+from discord import app_commands
+from discord.ext import commands
 import requests
 from datetime import datetime
 from typing import List, Dict, Optional
@@ -8,25 +8,41 @@ from requests import HTTPError
 
 url = "https://v6.db.transport.rest"
 
-class ConnectionView(nextcord.ui.View):
-    """View with navigation buttons for train connections."""
+class RemarksModal(discord.ui.Modal, title="Journey Remarks"):
+    """Modal to display remarks for a journey."""
+    remarks_input = discord.ui.TextInput(
+        label="Remarks",
+        style=discord.TextStyle.paragraph,
+        required=False
+    )
     
-    def __init__(self, embeds: List[nextcord.Embed], user_id: int):
+    def __init__(self, remarks_text: str):
+        super().__init__()
+        self.remarks_input.default = remarks_text
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+class ConnectionView(discord.ui.View):
+    """View with navigation buttons for train connections."""
+
+    def __init__(self, embeds: List[discord.Embed], user_id: int, journeys: List[Dict]):
         super().__init__(timeout=300)  # 5 minutes timeout
         self.embeds = embeds
         self.current_page = 0
         self.user_id = user_id
+        self.journeys = journeys
         self.update_buttons()
     
     def update_buttons(self):
         """Update button states based on current page."""
-        self.previous_button.disabled = self.current_page == 0
-        self.next_button.disabled = self.current_page == len(self.embeds) - 1
-        self.previous_button.label = f"← Previous"
-        self.next_button.label = f"Next →"
+        self.previous_btn.disabled = self.current_page == 0
+        self.next_btn.disabled = self.current_page == len(self.embeds) - 1
+        self.previous_btn.label = f"← Previous"
+        self.next_btn.label = f"Next →"
     
-    @nextcord.ui.button(label="← Previous", style=nextcord.ButtonStyle.primary, disabled=True)
-    async def previous_button(self, button: nextcord.ui.Button, interaction: Interaction):
+    @discord.ui.button(label="← Previous", style=discord.ButtonStyle.primary, disabled=True)
+    async def previous_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Go to previous connection."""
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("This is not your search!", ephemeral=True)
@@ -37,8 +53,8 @@ class ConnectionView(nextcord.ui.View):
             self.update_buttons()
             await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
     
-    @nextcord.ui.button(label="Next →", style=nextcord.ButtonStyle.primary)
-    async def next_button(self, button: nextcord.ui.Button, interaction: Interaction):
+    @discord.ui.button(label="Next →", style=discord.ButtonStyle.primary)
+    async def next_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Go to next connection."""
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("This is not your search!", ephemeral=True)
@@ -49,13 +65,63 @@ class ConnectionView(nextcord.ui.View):
             self.update_buttons()
             await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
     
-    @nextcord.ui.button(label="🗑️", style=nextcord.ButtonStyle.danger)
-    async def delete_button(self, button: nextcord.ui.Button, interaction: Interaction):
+    @discord.ui.button(label="📝 Remarks", style=discord.ButtonStyle.secondary)
+    async def remarks_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Show remarks for current journey."""
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This is not your search!", ephemeral=True)
+            return
+
+        journey = self.journeys[self.current_page]
+        remarks_list = []
+
+        # Collect remarks from all legs
+        for i, leg in enumerate(journey.get('legs', []), 1):
+            leg_remarks = leg.get('remarks', [])
+            if leg_remarks:
+                line_name = leg.get('line', {}).get('name', 'Walk')
+                origin = leg['origin']['name']
+                dest = leg['destination']['name']
+                remarks_list.append(f"**Leg {i}: {line_name}** ({origin} → {dest})")
+
+                for remark in leg_remarks:
+                    remark_text = remark.get('text', '')
+                    remark_summary = remark.get('summary', '')
+                    if remark_summary:
+                        remarks_list.append(f"• {remark_summary}: {remark_text}")
+                    elif remark_text:
+                        remarks_list.append(f"• {remark_text}")
+                remarks_list.append("")  # Empty line between legs
+
+        # Collect journey-level remarks
+        journey_remarks = journey.get('remarks', [])
+        if journey_remarks:
+            remarks_list.append("**Journey Remarks:**")
+            for remark in journey_remarks:
+                remark_text = remark.get('text', '')
+                remark_summary = remark.get('summary', '')
+                if remark_summary:
+                    remarks_list.append(f"• {remark_summary}: {remark_text}")
+                elif remark_text:
+                    remarks_list.append(f"• {remark_text}")
+
+        if remarks_list:
+            remarks_text = "\n".join(remarks_list)
+            # Truncate if too long for modal (max 4000 chars)
+            if len(remarks_text) > 3900:
+                remarks_text = remarks_text[:3900] + "\n... (truncated)"
+            modal = RemarksModal(remarks_text)
+            await interaction.response.send_modal(modal)
+        else:
+            await interaction.response.send_message("No remarks available for this journey.", ephemeral=True)
+
+    @discord.ui.button(label="🗑️", style=discord.ButtonStyle.danger)
+    async def delete_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Delete the message."""
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("This is not your search!", ephemeral=True)
             return
-        
+
         await interaction.message.delete()
         self.stop()
 
@@ -104,20 +170,20 @@ class DeutscheBahn(commands.Cog):
         mins = minutes % 60
         return f"{hours}h {mins}m"
     
-    def create_connection_embed(self, journey: Dict, idx: int, total: int, from_name: str, to_name: str) -> nextcord.Embed:
+    def create_connection_embed(self, journey: Dict, idx: int, total: int, from_name: str, to_name: str, from_id: str, to_id: str) -> discord.Embed:
         """Create an embed for a single connection."""
         first_leg = journey['legs'][0]
         last_leg = journey['legs'][-1]
-        
+
         dep_time = datetime.fromisoformat(first_leg['departure'].replace('Z', '+00:00'))
         arr_time = datetime.fromisoformat(last_leg['arrival'].replace('Z', '+00:00'))
-        
+
         duration_mins = int((arr_time - dep_time).total_seconds() / 60)
         transfers = len(journey['legs']) - 1
-        
-        embed = nextcord.Embed(
+
+        embed = discord.Embed(
             title=f"🚄 Connection {idx} of {total}",
-            description=f"**{from_name}** → **{to_name}**",
+            description=f"**{from_name}** ({from_id}) → **{to_name}** ({to_id})",
             color=0x667eea,
             timestamp=dep_time
         )
@@ -145,7 +211,19 @@ class DeutscheBahn(commands.Cog):
             value=str(transfers),
             inline=True
         )
-        
+
+        # Add price if available
+        price_info = journey.get('price')
+        if price_info:
+            amount = price_info.get('amount')
+            currency = price_info.get('currency', 'EUR')
+            if amount is not None:
+                embed.add_field(
+                    name="💰 Price",
+                    value=f"{amount:.2f} {currency}",
+                    inline=True
+                )
+
         route_lines = []
         for leg in journey['legs']:
             line_name = leg.get('line', {}).get('name', '🚶 Walk')
@@ -170,44 +248,25 @@ class DeutscheBahn(commands.Cog):
         
         return embed
     
-    @nextcord.slash_command(
+    @app_commands.command(
         name="train",
-        description="Search for train connections in Germany",
-        integration_types=[
-            IntegrationType.user_install,
-            IntegrationType.guild_install,
-        ],
-        contexts=[
-            InteractionContextType.guild,
-            InteractionContextType.bot_dm,
-            InteractionContextType.private_channel,
-        ],
+        description="Search for train connections in Germany"
+    )
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.describe(
+        from_station="Departure station (e.g., München Hbf)",
+        to_station="Destination station (e.g., Berlin Hbf)",
+        date="Date (YYYY-MM-DD, default: today)",
+        time="Time (HH:MM, default: now)"
     )
     async def train(
         self,
-        interaction: Interaction,
-        from_station: str = SlashOption(
-            name="from",
-            description="Departure station (e.g., München Hbf)",
-            required=True
-        ),
-        to_station: str = SlashOption(
-            name="to",
-            description="Destination station (e.g., Berlin Hbf)",
-            required=True
-        ),
-        date: Optional[str] = SlashOption(
-            name="date",
-            description="Date (YYYY-MM-DD, default: today)",
-            required=False,
-            default=None
-        ),
-        time: Optional[str] = SlashOption(
-            name="time",
-            description="Time (HH:MM, default: now)",
-            required=False,
-            default=None
-        )
+        interaction: discord.Interaction,
+        from_station: str,
+        to_station: str,
+        date: Optional[str] = None,
+        time: Optional[str] = None
     ):
         """Search for train connections between two stations."""
         await interaction.response.defer()
@@ -263,26 +322,30 @@ class DeutscheBahn(commands.Cog):
                 return
             
             embeds = []
-            for idx, journey in enumerate(journeys[:5], 1):
+            journey_list = journeys[:5]
+            for idx, journey in enumerate(journey_list, 1):
                 embed = self.create_connection_embed(
                     journey,
                     idx,
-                    len(journeys[:5]),
+                    len(journey_list),
                     from_station_obj['name'],
-                    to_station_obj['name']
+                    to_station_obj['name'],
+                    from_station_obj['id'],
+                    to_station_obj['id']
                 )
                 embeds.append(embed)
-            
-            view = ConnectionView(embeds, interaction.user.id)
-            
+
+            view = ConnectionView(embeds, interaction.user.id, journey_list)
+
             await interaction.followup.send(embed=embeds[0], view=view)
 
         except HTTPError as httpe:
             print(httpe)
-            await interaction.send(f"An error occured:\n```bash\n{httpe}```")
+            await interaction.followup.send(f"An error occured:\n```bash\n{httpe}```")
         except Exception as e:
             print(e)
-            await interaction.send(f"An error occured:\n```bash\n{e}```")
+            await interaction.followup.send(f"An error occured:\n```bash\n{e}```")
 
-def setup(bot):
-    bot.add_cog(DeutscheBahn(bot))
+async def setup(bot):
+    """Required setup function for cog loading"""
+    await bot.add_cog(DeutscheBahn(bot))
