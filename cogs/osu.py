@@ -1,45 +1,53 @@
 # type: ignore
-import nextcord
-from nextcord import File, Interaction, IntegrationType, InteractionContextType, slash_command
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 import re
 import aiohttp
 import json
 import os
 import dotenv
-from datetime import datetime
-from nextcord.ext.commands import Bot, Cog
+from datetime import datetime, timedelta
 from osrparse import Replay
 from osrparse.utils import GameMode
 
 dotenv.load_dotenv()
 
-class OsuBeatmapView(nextcord.ui.View):
+class OsuBeatmapView(discord.ui.View):
     def __init__(self, beatmap_data, beatmap_id):
         super().__init__(timeout=300)
         self.beatmap_data = beatmap_data
         self.beatmap_id = beatmap_id
 
-    @nextcord.ui.button(label="🌐 Open in Browser", style=nextcord.ButtonStyle.primary)
-    async def open_browser(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    @discord.ui.button(label="🌐 Open in Browser", style=discord.ButtonStyle.primary)
+    async def open_browser(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(f"https://osu.ppy.sh/s/{self.beatmap_id}", ephemeral=True)
 
-    @nextcord.ui.button(label="📥 osu! Direct", style=nextcord.ButtonStyle.success)
-    async def download_beatmap(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    @discord.ui.button(label="📥 osu! Direct", style=discord.ButtonStyle.success)
+    async def download_beatmap(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(f"osu://dl/{self.beatmap_id}", ephemeral=True)
 
-    @nextcord.ui.button(label="❌ Dismiss", style=nextcord.ButtonStyle.danger)
-    async def dismiss(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    @discord.ui.button(label="❌ Dismiss", style=discord.ButtonStyle.danger)
+    async def dismiss(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.edit_message(view=None)
         self.stop()
 
 class OsuBeatmapConverter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.client_id = os.environ["OSU_CLIENT_ID"]
-        self.client_secret = os.environ["OSU_CLIENT_SECRET"]
+        self.client_id = os.environ.get("OSU_CLIENT_ID")
+        self.client_secret = os.environ.get("OSU_CLIENT_SECRET")
         self.access_token = None
         self.token_expires = None
+        self.session = None
+
+    async def cog_load(self):
+        """Initialize aiohttp session when cog loads"""
+        self.session = aiohttp.ClientSession()
+
+    async def cog_unload(self):
+        """Cleanup aiohttp session when cog unloads"""
+        if self.session and not self.session.closed:
+            await self.session.close()
 
     async def get_access_token(self):
         """Get OAuth2 access token for osu! API v2"""
@@ -49,22 +57,20 @@ class OsuBeatmapConverter(commands.Cog):
         if not self.client_id or not self.client_secret:
             return None
 
-        async with aiohttp.ClientSession() as session:
-            data = {
-                'client_id': self.client_id,
-                'client_secret': self.client_secret,
-                'grant_type': 'client_credentials',
-                'scope': 'public'
-            }
+        data = {
+            'client_id': self.client_id,
+            'client_secret': self.client_secret,
+            'grant_type': 'client_credentials',
+            'scope': 'public'
+        }
 
-            async with session.post('https://osu.ppy.sh/oauth/token', data=data) as resp:
-                if resp.status == 200:
-                    token_data = await resp.json()
-                    self.access_token = token_data['access_token']
-                    from datetime import timedelta
-                    self.token_expires = datetime.now() + timedelta(seconds=token_data['expires_in'] - 60)
-                    return self.access_token
-                return None
+        async with self.session.post('https://osu.ppy.sh/oauth/token', data=data) as resp:
+            if resp.status == 200:
+                token_data = await resp.json()
+                self.access_token = token_data['access_token']
+                self.token_expires = datetime.now() + timedelta(seconds=token_data['expires_in'] - 60)
+                return self.access_token
+            return None
 
     async def get_beatmapset_info(self, beatmapset_id):
         """Fetch beatmapset information from osu! API v2"""
@@ -78,15 +84,14 @@ class OsuBeatmapConverter(commands.Cog):
             'Accept': 'application/json'
         }
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f'https://osu.ppy.sh/api/v2/beatmapsets/{beatmapset_id}', headers=headers) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-                return None
+        async with self.session.get(f'https://osu.ppy.sh/api/v2/beatmapsets/{beatmapset_id}', headers=headers) as resp:
+            if resp.status == 200:
+                return await resp.json()
+            return None
 
     def create_beatmap_embed(self, beatmap_data, beatmap_id):
         """Create a rich embed with beatmap information"""
-        embed = nextcord.Embed(
+        embed = discord.Embed(
             title=f"{beatmap_data['artist']} - {beatmap_data['title']}",
             url=f"https://osu.ppy.sh/s/{beatmap_id}",
             color=0xff69b4
@@ -126,7 +131,7 @@ class OsuBeatmapConverter(commands.Cog):
 
     def create_fallback_embed(self, beatmap_id):
         """Create a simple embed when API data is not available"""
-        embed = nextcord.Embed(
+        embed = discord.Embed(
             title="🎵 Beatmap Found!",
             description=f"Found a beatmap with ID: {beatmap_id}",
             url=f"https://osu.ppy.sh/s/{beatmap_id}",
@@ -164,5 +169,6 @@ class OsuBeatmapConverter(commands.Cog):
                     await message.channel.send(embed=embed, view=view)
                     print(f"Error fetching beatmap {beatmap_id}: {e}")
 
-def setup(bot):
-    bot.add_cog(OsuBeatmapConverter(bot))
+async def setup(bot):
+    """Required setup function for cog loading"""
+    await bot.add_cog(OsuBeatmapConverter(bot))

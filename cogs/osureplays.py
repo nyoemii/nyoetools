@@ -1,9 +1,9 @@
 # type: ignore
-import nextcord
-from nextcord import Attachment, Interaction, IntegrationType, InteractionContextType, slash_command
+import discord
+from discord import app_commands
+from discord.ext import commands
 import os
 import re
-from nextcord.ext.commands import Bot, Cog
 from osrparse import Replay
 
 def calculate_mods(mods: list):
@@ -35,26 +35,20 @@ def decode_mods(mods_int):
             mods_int -= value
     return "+" + "".join(mods_list)
 
-class OsuReplayData(Cog):
+class OsuReplayData(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.replay_folder = "" # replay folder
+        self.replay_folder = "FOLDER TO SAVE REPLAYS TO" # CHANGE THIS!!!!
 
-    @slash_command(
+    @commands.hybrid_command(
         name="replayinfo",
-        description="Analyzes your Replay and returns fancy values",
-        integration_types=[
-            IntegrationType.user_install,
-            IntegrationType.guild_install,
-        ],
-        contexts=[
-            InteractionContextType.guild,
-            InteractionContextType.bot_dm,
-            InteractionContextType.private_channel,
-        ]
+        description="Analyzes your Replay and returns fancy values"
     )
-    async def replayinfo(self, interaction: Interaction[Bot], replay_file: Attachment):
-        await interaction.response.defer()
+    @app_commands.describe(replay_file="The osu! replay file to analyze")
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    async def replayinfo(self, ctx: commands.Context, replay_file: discord.Attachment):
+        await ctx.defer()
         try:
             if not os.path.exists(self.replay_folder):
                 os.makedirs(self.replay_folder)
@@ -67,7 +61,7 @@ class OsuReplayData(Cog):
             mods_int = replay.mods
             mods_display = decode_mods(mods_int)
             
-            embed = nextcord.Embed(title="Replay Info", description=f"Uploader: {replay.username}", color=0xff00ff)
+            embed = discord.Embed(title="Replay Info", description=f"Uploader: {replay.username}", color=0xff00ff)
 
             embed.add_field(name="Gamemode", value=replay.mode.name, inline=True)
             embed.add_field(name="Score", value=replay.score, inline=True)
@@ -81,9 +75,13 @@ class OsuReplayData(Cog):
             embed.add_field(name="Misses", value=replay.count_miss, inline=True)
             embed.add_field(name="Mods", value=mods_display, inline=True)
             
-            await interaction.send(embed=embed)
+            await ctx.send(embed=embed)
             return
             
         except Exception as e:
-            await interaction.send("An error occured, check the logs for more info.")
+            await ctx.send("An error occured, check the logs for more info.")
             print(e)
+
+async def setup(bot):
+    """Required setup function for cog loading"""
+    await bot.add_cog(OsuReplayData(bot))

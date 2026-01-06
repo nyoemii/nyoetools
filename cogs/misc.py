@@ -7,10 +7,9 @@ from typing import List, Union
 import datetime
 import re
 
-from nextcord import Colour, Embed, \
-    IntegrationType, Interaction, InteractionContextType, slash_command, SlashOption
-import nextcord
-from nextcord.ext.commands import Bot, Cog
+import discord
+from discord import app_commands
+from discord.ext import commands
 import psutil
 
 class HumanBytes:
@@ -59,46 +58,35 @@ class HumanBytes:
 
 size = HumanBytes.format
 
-class Misc(Cog):
-    def __init__(self, bot: Bot):
+class Misc(commands.Cog):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.proc = psutil.Process()
 
-    @slash_command(
-        description="Replies with Pong!",
-        integration_types=[
-            IntegrationType.user_install,
-            IntegrationType.guild_install,
-        ],
-        contexts=[
-            InteractionContextType.guild,
-            InteractionContextType.bot_dm,
-            InteractionContextType.private_channel,
-        ],
+    @commands.hybrid_command(
+        name="ping",
+        description="Replies with Pong!"
     )
-    async def ping(self, interaction: Interaction[Bot]):
-        embed: Embed = Embed(
-            color=Colour.green(),
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    async def ping(self, ctx: commands.Context):
+        embed = discord.Embed(
+            color=discord.Color.green(),
             title="Pong!",
             description=f"-# **Latency**: {self.bot.latency * 1000:.1f} ms • **Memory usage**: {size(self.proc.memory_info().rss)}"
         )
-        await interaction.response.send_message(embed=embed)
+        await ctx.send(embed=embed)
 
-    @slash_command(
-        description="Current System Info",
-        integration_types=[
-            IntegrationType.user_install,
-            IntegrationType.guild_install,
-        ],
-        contexts=[
-            InteractionContextType.guild,
-            InteractionContextType.bot_dm,
-            InteractionContextType.private_channel,
-        ],
+    @commands.hybrid_command(
+        name="info",
+        description="Current System Info"
     )
-    async def info(self, interaction: Interaction[Bot], ephemeral: bool = False):
-        await interaction.response.defer(ephemeral=ephemeral)
-        embed: Embed = Embed(title="System Info", color=Colour.blue(), timestamp=datetime.datetime.now())
+    @app_commands.describe(ephemeral="Make the response visible only to you")
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    async def info(self, ctx: commands.Context, ephemeral: bool = False):
+        await ctx.defer(ephemeral=ephemeral)
+        embed = discord.Embed(title="System Info", color=discord.Color.blue(), timestamp=datetime.datetime.now())
         embed.add_field(name="CPU Usage", value=f"{psutil.cpu_percent()}%")
         vmem = psutil.virtual_memory()
         embed.add_field(name="Memory Usage", value=f"{vmem.percent:.1f}% ({size(vmem.total-vmem.available)}/{size(vmem.total)})")
@@ -108,26 +96,19 @@ class Misc(Cog):
         embed.add_field(name="Network Stats", value=f"Sent: {size(nctrs.bytes_sent)}\nReceived: {size(nctrs.bytes_recv)}")
         embed.add_field(name="Uptime", value=f"<t:{psutil.boot_time():.0f}:R>")
         embed.add_field(name="Python Version", value=f"`{sys.version}`")
-        embed.add_field(name="Nextcord Version", value="[3.1.0+g0429ea4f](https://github.com/nextcord/nextcord?rev=0429ea4fc2cc7d372425359347c5f8550c41876c#0429ea4fc2cc7d372425359347c5f8550c41876c)")
-        await interaction.send(embed=embed, ephemeral=ephemeral)
+        embed.add_field(name="Discord.py Version", value=f"`{discord.__version__}`")
+        await ctx.send(embed=embed, ephemeral=ephemeral)
 
-    @slash_command(
+    @commands.hybrid_command(
         name="credits",
-        description="Gives credits to the people helping and developing",
-        integration_types=[
-            IntegrationType.user_install,
-            IntegrationType.guild_install,
-        ],
-        contexts=[
-            InteractionContextType.guild,
-            InteractionContextType.bot_dm,
-            InteractionContextType.private_channel,
-        ],
+        description="Gives credits to the people helping and developing"
     )
-    async def credits(self, interaction: Interaction[Bot]):
-        embed = nextcord.Embed(
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    async def credits(self, ctx: commands.Context):
+        embed = discord.Embed(
             title="Credits",
-            color=nextcord.Color.blue()
+            color=discord.Color.blue()
         )
 
         embed.add_field(
@@ -141,4 +122,8 @@ class Misc(Cog):
             inline=True
         )
 
-        await interaction.send(embed=embed)
+        await ctx.send(embed=embed)
+
+async def setup(bot):
+    """Required setup function for cog loading"""
+    await bot.add_cog(Misc(bot))
